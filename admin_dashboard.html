@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CardioCare AI — Admin Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .admin-grid {
+      display               : grid;
+      grid-template-columns : 280px 1fr;
+      gap                   : 24px;
+      min-height            : calc(100vh - 120px);
+    }
+
+    /* Sidebar */
+    .admin-sidebar {
+      position : sticky;
+      top      : 92px;
+      height   : fit-content;
+    }
+
+    .sidebar-menu { list-style: none; }
+
+    .sidebar-menu li {
+      margin-bottom : 4px;
+    }
+
+    .sidebar-menu a {
+      display         : flex;
+      align-items     : center;
+      gap             : 12px;
+      padding         : 12px 16px;
+      border-radius   : 10px;
+      color           : var(--text-secondary);
+      text-decoration : none;
+      font-size       : 14px;
+      font-weight     : 500;
+      transition      : var(--transition);
+      cursor          : pointer;
+    }
+
+    .sidebar-menu a:hover,
+    .sidebar-menu a.active {
+      background : rgba(0,229,255,0.08);
+      color      : var(--cyan);
+    }
+
+    .sidebar-menu .menu-icon {
+      font-size : 18px;
+      width     : 24px;
+      text-align: center;
+    }
+
+    /* DB Stats */
+    .db-stats {
+      display               : grid;
+      grid-template-columns : repeat(3, 1fr);
+      gap                   : 16px;
+      margin-bottom         : 24px;
+    }
+
+    /* Search Bar */
+    .admin-search-bar {
+      display   : flex;
+      gap       : 12px;
+      flex-wrap : wrap;
+      margin-bottom: 20px;
+    }
+
+    .search-filter {
+      padding       : 10px 14px;
+      background    : rgba(255,255,255,0.04);
+      border        : 1px solid rgba(255,255,255,0.1);
+      border-radius : 10px;
+      color         : white;
+      font-size     : 14px;
+      outline       : none;
+      cursor        : pointer;
+      appearance    : none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' %3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
+    }
+
+    .search-filter option {
+      background-color : white;
+      color            : #1a1a1a;
+    }
+
+    /* Patient Detail Modal */
+    .modal-overlay {
+      display         : none;
+      position        : fixed;
+      top:0; left:0; right:0; bottom:0;
+      background      : rgba(0,0,0,0.8);
+      z-index         : 2000;
+      align-items     : center;
+      justify-content : center;
+      backdrop-filter : blur(4px);
+    }
+
+    .modal-overlay.show {
+      display : flex;
+    }
+
+    .modal-box {
+      width      : 90%;
+      max-width  : 750px;
+      max-height : 85vh;
+      overflow-y : auto;
+      background : #050d2a;
+      border     : 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding    : 36px;
+      position   : relative;
+      animation  : fadeInUp 0.3s ease;
+    }
+
+    .modal-close {
+      position   : absolute;
+      top        : 16px;
+      right      : 16px;
+      background : rgba(255,255,255,0.08);
+      border     : none;
+      color      : white;
+      width      : 36px;
+      height     : 36px;
+      border-radius: 50%;
+      font-size  : 18px;
+      cursor     : pointer;
+      transition : var(--transition);
+    }
+
+    .modal-close:hover {
+      background : rgba(255,68,68,0.2);
+      color      : var(--red);
+    }
+
+    /* Patient History in Modal */
+    .history-accordion {
+      margin-top: 20px;
+    }
+
+    .accordion-item {
+      margin-bottom  : 12px;
+      border         : 1px solid var(--border-glass);
+      border-radius  : 12px;
+      overflow       : hidden;
+    }
+
+    .accordion-header {
+      padding        : 14px 18px;
+      cursor         : pointer;
+      display        : flex;
+      justify-content: space-between;
+      align-items    : center;
+      background     : rgba(255,255,255,0.03);
+      transition     : var(--transition);
+    }
+
+    .accordion-header:hover {
+      background : rgba(0,229,255,0.06);
+    }
+
+    .accordion-body {
+      display  : none;
+      padding  : 16px 18px;
+      border-top: 1px solid var(--border-glass);
+    }
+
+    .accordion-body.show { display: block; }
+
+    /* Risk Mini Display */
+    .risk-grid-mini {
+      display               : grid;
+      grid-template-columns : 1fr 1fr;
+      gap                   : 10px;
+      margin                : 12px 0;
+    }
+
+    .risk-mini-item {
+      padding       : 10px 12px;
+      background    : rgba(255,255,255,0.03);
+      border-radius : 8px;
+      font-size     : 13px;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <div class="brand-icon">
+        <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
+      </div>
+      <span class="brand-text">CardioCare AI</span>
+    </a>
+    <ul class="navbar-menu">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="admin_dashboard.html" class="active">
+        🛡️ Admin Dashboard</a></li>
+      <li>
+        <a href="#" onclick="adminLogout()"
+           style="color:var(--red)">
+          🚪 Logout
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="main-content">
+
+    <div class="flex-between mb-3" style="flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="section-title" style="font-size:26px">
+          🛡️ Admin Dashboard
+        </div>
+        <div style="font-size:14px;color:var(--text-secondary)">
+          Logged in as:
+          <span class="text-cyan" id="adminUserDisp">Admin</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline btn-sm"
+                onclick="refreshAllData()">
+          🔄 Refresh
+        </button>
+        <button class="btn btn-danger btn-sm"
+                onclick="adminLogout()">
+          🚪 Logout
+        </button>
+      </div>
+    </div>
+
+    <div class="admin-grid">
+
+      <!-- SIDEBAR -->
+      <div class="admin-sidebar">
+        <div class="glass-card" style="padding:20px">
+          <div style="font-size:11px;color:var(--text-muted);
+               text-transform:uppercase;letter-spacing:1px;
+               margin-bottom:16px">Navigation</div>
+          <ul class="sidebar-menu">
+            <li>
+              <a class="active" onclick="showSection('patients')">
+                <span class="menu-icon">
+                  <img src="assets/img/lucid_patient.png" alt="Patients" class="lucid-icon">
+                </span>All Patients
+              </a>
+            </li>
+            <li>
+              <a onclick="showSection('readings')">
+                <span class="menu-icon">
+                  <img src="assets/img/lucid_monitor.png" alt="Readings" class="lucid-icon">
+                </span>All Readings
+              </a>
+            </li>
+            <li>
+              <a onclick="showSection('database')">
+                <span class="menu-icon">
+                  <img src="assets/img/lucid_database.png" alt="Database" class="lucid-icon">
+                </span>Database Tables
+              </a>
+            </li>
+            <li>
+              <a onclick="showSection('settings')">
+                <span class="menu-icon">
+                  <svg class="lucid-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </span>Settings
+              </a>
+            </li>
+          </ul>
+
+          <div class="divider"></div>
+
+          <div style="font-size:11px;color:var(--text-muted);
+               text-transform:uppercase;letter-spacing:1px;
+               margin-bottom:12px">Database Info</div>
+          <div style="font-size:13px;color:var(--text-secondary);
+               line-height:2">
+            📁 SQLite on Pi<br>
+            💾 <span id="dbSize">—</span> MB used<br>
+            📋 <span id="totalPat">—</span> patients<br>
+            📊 <span id="totalRead">—</span> readings
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN CONTENT AREA -->
+      <div>
+
+        <!-- DB STATS -->
+        <div class="db-stats">
+          <div class="glass-card stat-card">
+            <span class="stat-value text-cyan"
+                  id="statPatients">—</span>
+            <div class="stat-label">Total Patients</div>
+          </div>
+          <div class="glass-card stat-card">
+            <span class="stat-value text-cyan"
+                  id="statReadings">—</span>
+            <div class="stat-label">Total Readings</div>
+          </div>
+          <div class="glass-card stat-card">
+            <span class="stat-value text-cyan"
+                  id="statToday">—</span>
+            <div class="stat-label">Today's Readings</div>
+          </div>
+        </div>
+
+        <!-- PATIENTS SECTION -->
+        <div id="section-patients" class="glass-card">
+          <div class="flex-between mb-3" style="flex-wrap:wrap;gap:12px">
+            <div class="section-title">👥 All Patients</div>
+            <div style="font-size:13px;color:var(--text-secondary)">
+              Click any row to view full details & history
+            </div>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="admin-search-bar">
+            <input type="text" class="form-input"
+                   id="adminSearchInput" style="flex:1;min-width:200px"
+                   placeholder="Search by Name, ID, or Age..."
+                   oninput="filterPatients()">
+            <select class="search-filter" id="genderFilter"
+                    onchange="filterPatients()">
+              <option value="">All Genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+            <select class="search-filter" id="ageFilter"
+                    onchange="filterPatients()">
+              <option value="">All Ages</option>
+              <option value="0-30">Under 30</option>
+              <option value="30-50">30–50</option>
+              <option value="50-70">50–70</option>
+              <option value="70-200">Above 70</option>
+            </select>
+          </div>
+
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Patient ID</th>
+                  <th>Name</th>
+                  <th>Age</th>
+                  <th>Gender</th>
+                  <th>Weight</th>
+                  <th>Readings</th>
+                  <th>Last Visit</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="patientsTableBody">
+                <tr>
+                  <td colspan="8" style="text-align:center;
+                      padding:30px;color:var(--text-muted)">
+                    <div class="spinner"></div>
+                    <div style="margin-top:12px">Loading...</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- READINGS SECTION (hidden by default) -->
+        <div id="section-readings" class="glass-card"
+             style="display:none">
+          <div class="section-title mb-3">📊 All Readings</div>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Patient ID</th>
+                  <th>Arrhythmia</th>
+                  <th>Heart Attack</th>
+                  <th>Stroke</th>
+                  <th>Hypertension</th>
+                  <th>HR</th>
+                  <th>SpO2</th>
+                </tr>
+              </thead>
+              <tbody id="readingsTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DATABASE SECTION -->
+        <div id="section-database" class="glass-card"
+             style="display:none">
+          <div class="section-title mb-3">💾 Database Tables</div>
+          <div id="dbTablesContent"></div>
+        </div>
+
+        <!-- SETTINGS SECTION -->
+        <div id="section-settings" class="glass-card"
+             style="display:none">
+          <div class="section-title mb-3">⚙️ Settings</div>
+          <div class="form-group">
+            <label class="form-label">Admin Username</label>
+            <input type="text" class="form-input"
+                   id="newAdminUser" placeholder="New username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" class="form-input"
+                   id="newAdminPass" placeholder="New password">
+          </div>
+          <button class="btn btn-primary"
+                  onclick="updateCredentials()">
+            Save Changes
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Detail Modal -->
+<div class="modal-overlay" id="patientModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+
+    <div id="modalContent">
+      <!-- Patient Header -->
+      <div style="display:flex;align-items:center;
+           gap:20px;margin-bottom:24px">
+        <div style="width:64px;height:64px;border-radius:50%;
+             background:linear-gradient(135deg,#00b4d8,#0077b6);
+             display:flex;align-items:center;justify-content:center;
+             font-size:28px;box-shadow:0 0 20px rgba(0,180,216,0.3)"
+             id="modalAvatar">👤</div>
+        <div>
+          <h2 style="font-size:22px;margin-bottom:4px"
+              id="modalName">—</h2>
+          <div style="font-size:13px;color:var(--text-secondary)"
+               id="modalMeta">—</div>
+        </div>
+      </div>
+
+      <!-- Patient Details Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;
+           gap:12px;margin-bottom:24px" id="modalDetailsGrid">
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Check History Button -->
+      <div style="text-align:center;margin-bottom:20px">
+        <button class="btn btn-primary"
+                id="checkHistoryBtn"
+                onclick="loadPatientHistoryInModal()">
+          📋 Check Full History
+        </button>
+      </div>
+
+      <!-- History Area -->
+      <div id="modalHistoryArea" style="display:none">
+        <div class="section-title" style="font-size:18px;
+             margin-bottom:16px">
+          📊 Patient Health History
+        </div>
+        <div class="history-accordion" id="historyAccordion">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

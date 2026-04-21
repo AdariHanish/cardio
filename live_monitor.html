@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CardioCare AI — Live Monitor</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .monitor-grid {
+      display               : grid;
+      grid-template-columns : 1.4fr 1fr;
+      gap                   : 24px;
+    }
+
+    @media(max-width:900px) {
+      .monitor-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ECG Canvas */
+    .ecg-container {
+      position      : relative;
+      background    : #000810;
+      border-radius : 12px;
+      overflow      : hidden;
+      height        : 200px;
+      margin-bottom : 16px;
+      border        : 1px solid rgba(0,229,255,0.15);
+    }
+
+    #ecgCanvas {
+      width  : 100%;
+      height : 100%;
+    }
+
+    .ecg-waiting {
+      position        : absolute;
+      top             : 50%; left : 50%;
+      transform       : translate(-50%, -50%);
+      color           : var(--text-muted);
+      text-align      : center;
+      pointer-events  : none;
+    }
+
+    .ecg-grid-lines {
+      position : absolute;
+      top      : 0; left : 0;
+      width    : 100%; height : 100%;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+      background-size : 20px 20px;
+      pointer-events  : none;
+    }
+
+    /* Metric Cards */
+    .metric-cards {
+      display               : grid;
+      grid-template-columns : 1fr 1fr;
+      gap                   : 14px;
+    }
+
+    .metric-card {
+      padding       : 18px 16px;
+      border-radius : 14px;
+      text-align    : center;
+      background    : rgba(255,255,255,0.03);
+      border        : 1px solid rgba(255,255,255,0.07);
+    }
+
+    .metric-value {
+      font-family   : 'Orbitron', sans-serif;
+      font-size     : 28px;
+      font-weight   : 700;
+      color         : var(--cyan);
+      margin-bottom : 4px;
+    }
+
+    .metric-unit {
+      font-size  : 13px;
+      color      : var(--text-muted);
+    }
+
+    .metric-label {
+      font-size     : 11px;
+      color         : var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-top    : 4px;
+    }
+
+    /* AI Panel */
+    .ai-disease-row {
+      padding       : 14px 0;
+      border-bottom : 1px solid rgba(255,255,255,0.05);
+    }
+
+    .ai-disease-row:last-child { border-bottom: none; }
+
+    .ai-disease-header {
+      display         : flex;
+      justify-content : space-between;
+      align-items     : center;
+      margin-bottom   : 8px;
+    }
+
+    .ai-disease-name {
+      font-size   : 14px;
+      font-weight : 600;
+    }
+
+    .ai-disease-value {
+      font-size   : 18px;
+      font-weight : 700;
+    }
+
+    /* Status Bar */
+    .device-status-bar {
+      display         : flex;
+      align-items     : center;
+      gap             : 20px;
+      padding         : 14px 20px;
+      background      : rgba(0,229,255,0.04);
+      border          : 1px solid var(--border-glass);
+      border-radius   : 12px;
+      margin-bottom   : 20px;
+      flex-wrap       : wrap;
+    }
+
+    .countdown-display {
+      font-family   : 'Orbitron', sans-serif;
+      font-size     : 28px;
+      font-weight   : 700;
+      color         : var(--cyan);
+      text-shadow   : 0 0 20px var(--cyan-glow);
+      letter-spacing: 2px;
+    }
+
+    /* Patient selector */
+    .patient-selector {
+      padding       : 20px;
+      background    : rgba(0,229,255,0.04);
+      border        : 1px solid var(--border-glass);
+      border-radius : 14px;
+      margin-bottom : 20px;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <div class="brand-icon">
+        <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
+      </div>
+      <span class="brand-text">CardioCare AI</span>
+    </a>
+    <ul class="navbar-menu">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="new_patient.html">New Patient</a></li>
+      <li><a href="history.html">Patient History</a></li>
+      <li><a href="live_monitor.html" class="active">Live Monitor</a></li>
+      <li><a href="admin.html" class="navbar-admin-btn">⚙ Admin</a></li>
+    </ul>
+  </nav>
+
+  <div class="main-content">
+
+    <!-- Patient Selector -->
+    <div class="patient-selector">
+      <div class="flex-between" style="flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="section-title" style="font-size:18px">
+            📡 Live Monitoring Session
+          </div>
+          <div id="currentPatientInfo" style="font-size:14px;
+               color:var(--text-secondary);margin-top:4px">
+            No patient selected
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <input type="text" class="form-input"
+                 id="pidInput" style="width:200px"
+                 placeholder="Patient ID">
+          <button class="btn btn-outline btn-sm"
+                  onclick="setPatient()">
+            Set Patient
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Device Status Bar -->
+    <div class="device-status-bar">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);
+             text-transform:uppercase;letter-spacing:1px">
+          Device
+        </div>
+        <span class="badge badge-offline" id="liveDevStatus">
+          <span class="pulse-dot red"></span>Offline
+        </span>
+      </div>
+      <div style="width:1px;height:36px;background:var(--border-glass)"></div>
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);
+             text-transform:uppercase;letter-spacing:1px">
+          Status
+        </div>
+        <div style="font-size:14px;font-weight:600;color:var(--cyan)"
+             id="liveStatus">Waiting...</div>
+      </div>
+      <div style="width:1px;height:36px;background:var(--border-glass)"></div>
+      <div id="countdownSection" style="display:none">
+        <div style="font-size:11px;color:var(--text-muted);
+             text-transform:uppercase;letter-spacing:1px">
+          Time Remaining
+        </div>
+        <div class="countdown-display" id="countdownDisplay">
+          00:10:000
+        </div>
+      </div>
+      <div style="margin-left:auto">
+        <span class="badge badge-warning" id="sessionBadge">
+          IDLE
+        </span>
+      </div>
+    </div>
+
+    <!-- Main Monitor Grid -->
+    <div class="monitor-grid">
+
+      <!-- LEFT: ECG + Vitals -->
+      <div>
+        <!-- ECG Panel -->
+        <div class="glass-card" style="margin-bottom:20px">
+          <div class="flex-between mb-2">
+            <div class="section-title" style="font-size:18px">
+              📡 Live ECG Signal
+            </div>
+            <span class="badge badge-warning" id="ecgQuality">
+              Waiting
+            </span>
+          </div>
+
+          <div class="ecg-container">
+            <div class="ecg-grid-lines"></div>
+            <canvas id="ecgCanvas"></canvas>
+            <div class="ecg-waiting" id="ecgWaiting">
+              <div style="font-size:36px;margin-bottom:8px">📡</div>
+              Waiting for IoT Device...
+            </div>
+          </div>
+
+          <!-- Vitals Row -->
+          <div class="metric-cards">
+            <div class="metric-card">
+              <div class="metric-value" id="hrValue">--</div>
+              <div class="metric-unit">BPM</div>
+              <div class="metric-label">Heart Rate</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="spo2Value">--</div>
+              <div class="metric-unit">%</div>
+              <div class="metric-label">SpO2 Levels</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="sbpValue">--</div>
+              <div class="metric-unit">mmHg</div>
+              <div class="metric-label">Systolic BP</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="pttValue">--</div>
+              <div class="metric-unit">ms</div>
+              <div class="metric-label">PTT Value</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: AI Predictions Panel -->
+      <div class="glass-card">
+        <div class="section-title" style="font-size:18px;margin-bottom:4px">
+          <svg class="lucid-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+          AI Predictions
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);
+             margin-bottom:20px">
+          CardioNet-HX v1.0 — 5 Models
+        </div>
+
+        <!-- Arrhythmia -->
+        <div class="ai-disease-row">
+          <div class="ai-disease-header">
+            <span class="ai-disease-name">
+              <svg class="lucid-svg lucid-svg-sm" style="stroke:var(--red)" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Arrhythmia
+            </span>
+            <span class="ai-disease-value" id="arrValue"
+                  style="color:var(--text-muted)">--%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill progress-low"
+                 id="arrBar" style="width:0%"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);
+               margin-top:4px" id="arrStage">Stage: —</div>
+        </div>
+
+        <!-- Heart Attack -->
+        <div class="ai-disease-row">
+          <div class="ai-disease-header">
+            <span class="ai-disease-name">
+              <svg class="lucid-svg lucid-svg-sm" style="stroke:var(--red)" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              Heart Attack
+            </span>
+            <span class="ai-disease-value" id="haValue"
+                  style="color:var(--text-muted)">--%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill progress-low"
+                 id="haBar" style="width:0%"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);
+               margin-top:4px" id="haStage">Stage: —</div>
+        </div>
+
+        <!-- Stroke Risk -->
+        <div class="ai-disease-row">
+          <div class="ai-disease-header">
+            <span class="ai-disease-name">
+              <svg class="lucid-svg lucid-svg-sm" style="stroke:var(--orange)" viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.54Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.54Z"/></svg>
+              Stroke Risk
+            </span>
+            <span class="ai-disease-value" id="strValue"
+                  style="color:var(--text-muted)">--%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill progress-low"
+                 id="strBar" style="width:0%"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);
+               margin-top:4px" id="strStage">Stage: —</div>
+        </div>
+
+        <!-- Hypertension -->
+        <div class="ai-disease-row">
+          <div class="ai-disease-header">
+            <span class="ai-disease-name">
+              <svg class="lucid-svg lucid-svg-sm" viewBox="0 0 24 24"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
+              Hypertension
+            </span>
+            <span class="ai-disease-value" id="htnValue"
+                  style="color:var(--text-muted)">--%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill progress-low"
+                 id="htnBar" style="width:0%"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);
+               margin-top:4px" id="htnStage">Stage: —</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Overall Condition -->
+        <div id="overallCondition"
+             style="text-align:center;padding:16px;
+             border-radius:12px;background:rgba(255,255,255,0.03);
+             border:1px solid rgba(255,255,255,0.06)">
+          <div style="font-size:13px;color:var(--text-muted);
+               margin-bottom:6px">
+            OVERALL CONDITION
+          </div>
+          <div style="font-size:18px;font-weight:700;
+               color:var(--text-secondary)" id="overallText">
+            Waiting for results...
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Future Risk -->
+        <div id="futureRiskSection" style="display:none">
+          <div style="font-size:13px;font-weight:600;
+               color:var(--cyan);margin-bottom:10px">
+            🔮 Future Risk Prediction
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary);
+               line-height:1.7" id="futureRiskText">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/live.js"></script>
+</body>
+</html>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CardioCare AI — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Home specific styles */
+    .hero-section {
+      text-align : center;
+      padding    : 60px 0 50px;
+    }
+
+    .hero-badge {
+      display       : inline-flex;
+      align-items   : center;
+      gap           : 8px;
+      padding       : 6px 16px;
+      background    : rgba(0,229,255,0.1);
+      border        : 1px solid var(--border-glass);
+      border-radius : 20px;
+      font-size     : 12px;
+      color         : var(--cyan);
+      margin-bottom : 24px;
+      letter-spacing: 1px;
+    }
+
+    .hero-title {
+      font-family   : 'Orbitron', sans-serif;
+      font-size     : clamp(32px, 5vw, 54px);
+      font-weight   : 900;
+      line-height   : 1.15;
+      margin-bottom : 20px;
+      background    : linear-gradient(135deg,
+        #ffffff 0%,
+        #00e5ff 50%,
+        #42a5f5 100%
+      );
+      -webkit-background-clip : text;
+      -webkit-text-fill-color : transparent;
+      background-clip          : text;
+    }
+
+    .hero-subtitle {
+      font-size     : 17px;
+      color         : var(--text-secondary);
+      max-width     : 600px;
+      margin        : 0 auto 40px;
+      line-height   : 1.7;
+    }
+
+    /* Main Grid */
+    .home-grid {
+      display               : grid;
+      grid-template-columns : 1fr 1fr 1fr;
+      gap                   : 24px;
+      margin-bottom         : 30px;
+    }
+
+    @media(max-width:900px) {
+      .home-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Quick Actions */
+    .quick-action-btn {
+      width         : 100%;
+      padding       : 16px 24px;
+      border-radius : 14px;
+      font-size     : 15px;
+      font-weight   : 600;
+      cursor        : pointer;
+      transition    : var(--transition);
+      text-align    : left;
+      display       : flex;
+      align-items   : center;
+      gap           : 14px;
+      border        : none;
+      margin-bottom : 14px;
+      text-decoration: none;
+    }
+
+    .qa-primary {
+      background : linear-gradient(135deg, #00b4d8, #0077b6);
+      color      : white;
+      box-shadow : 0 4px 20px rgba(0,180,216,0.3);
+    }
+
+    .qa-primary:hover {
+      box-shadow : 0 8px 30px rgba(0,229,255,0.4);
+      transform  : translateY(-3px);
+    }
+
+    .qa-outline {
+      background : rgba(255,255,255,0.04);
+      color      : var(--cyan);
+      border     : 1px solid var(--border-glass) !important;
+    }
+
+    .qa-outline:hover {
+      background : rgba(0,229,255,0.08);
+      border-color: var(--cyan) !important;
+      transform  : translateY(-3px);
+    }
+
+    .qa-icon {
+      width         : 44px;
+      height        : 44px;
+      border-radius : 10px;
+      background    : rgba(255,255,255,0.15);
+      display       : flex;
+      align-items   : center;
+      justify-content: center;
+      font-size     : 20px;
+      flex-shrink   : 0;
+    }
+
+    /* Status Items */
+    .status-item {
+      display         : flex;
+      align-items     : center;
+      justify-content : space-between;
+      padding         : 14px 0;
+      border-bottom   : 1px solid rgba(255,255,255,0.05);
+    }
+
+    .status-item:last-child { border-bottom: none; }
+
+    .status-label {
+      display     : flex;
+      align-items : center;
+      gap         : 12px;
+      font-size   : 14px;
+      color       : var(--text-secondary);
+    }
+
+    .status-icon {
+      width         : 36px;
+      height        : 36px;
+      border-radius : 8px;
+      display       : flex;
+      align-items   : center;
+      justify-content: center;
+      font-size     : 16px;
+    }
+
+    /* Research Card */
+    .research-item {
+      padding       : 14px 0;
+      border-bottom : 1px solid rgba(255,255,255,0.05);
+    }
+
+    .research-item:last-child { border-bottom: none; }
+
+    .research-label {
+      font-size     : 11px;
+      color         : var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom : 4px;
+    }
+
+    .research-value {
+      font-size   : 14px;
+      color       : var(--text-primary);
+      font-weight : 500;
+    }
+
+    /* Stats Row */
+    .stats-row {
+      display               : grid;
+      grid-template-columns : repeat(4, 1fr);
+      gap                   : 20px;
+      margin-bottom         : 30px;
+    }
+
+    @media(max-width:768px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    .stat-card {
+      text-align : center;
+      padding    : 24px 16px;
+    }
+
+    .stat-value {
+      font-family : 'Orbitron', sans-serif;
+      font-size   : 32px;
+      font-weight : 700;
+      color       : var(--cyan);
+      display     : block;
+    }
+
+    .stat-label {
+      font-size  : 12px;
+      color      : var(--text-secondary);
+      margin-top : 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Bottom CTA */
+    .bottom-cta {
+      text-align : center;
+      padding    : 40px;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <div class="brand-icon">
+        <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
+      </div>
+      <span class="brand-text">CardioCare AI</span>
+    </a>
+    <ul class="navbar-menu">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="new_patient.html">New Patient</a></li>
+      <li><a href="history.html">Patient History</a></li>
+      <li><a href="live_monitor.html">Live Monitor</a></li>
+      <li><a href="admin.html" class="navbar-admin-btn">⚙ Admin</a></li>
+    </ul>
+  </nav>
+
+  <div class="main-content">
+
+    <!-- HERO -->
+    <div class="hero-section">
+      <div class="hero-badge">
+        <span class="pulse-dot green"></span>
+        AI-POWERED CARDIOVASCULAR DIAGNOSTICS
+      </div>
+      <h1 class="hero-title">
+        Intelligent Heart<br>Risk Prediction
+      </h1>
+      <p class="hero-subtitle">
+        Real-time hybrid deep learning for cardiovascular diagnostics.
+        Powered by CNN + BiLSTM + Attention mechanisms running
+        on IoT edge devices.
+      </p>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="glass-card stat-card float-anim">
+        <span class="stat-value" id="totalPatients">—</span>
+        <div class="stat-label">Total Patients</div>
+      </div>
+      <div class="glass-card stat-card float-anim" style="animation-delay:0.5s">
+        <span class="stat-value" id="totalReadings">—</span>
+        <div class="stat-label">Total Readings</div>
+      </div>
+      <div class="glass-card stat-card float-anim" style="animation-delay:1s">
+        <span class="stat-value">94.7%</span>
+        <div class="stat-label">Model Accuracy</div>
+      </div>
+      <div class="glass-card stat-card float-anim" style="animation-delay:1.5s">
+        <span class="stat-value">5</span>
+        <div class="stat-label">AI Models</div>
+      </div>
+    </div>
+
+    <!-- MAIN 3-COLUMN GRID -->
+    <div class="home-grid">
+
+      <!-- CARD 1: Quick Actions -->
+      <div class="glass-card">
+        <div class="section-title">⚡ Quick Actions</div>
+        <div class="section-subtitle">Start patient session</div>
+
+        <a href="new_patient.html" class="quick-action-btn qa-primary">
+          <div class="qa-icon">
+            <img src="assets/img/lucid_patient.png" alt="Patient" class="lucid-icon">
+          </div>
+          <div>
+            <div style="font-weight:700">Register New Patient</div>
+            <div style="font-size:12px;opacity:0.7;margin-top:2px">
+              Create patient profile & ID
+            </div>
+          </div>
+        </a>
+
+        <a href="history.html" class="quick-action-btn qa-outline">
+          <div class="qa-icon" style="background:rgba(0,229,255,0.1)">
+            <img src="assets/img/lucid_search.png" alt="Search" class="lucid-icon">
+          </div>
+          <div>
+            <div style="font-weight:700">Search Existing Patient</div>
+            <div style="font-size:12px;opacity:0.7;margin-top:2px">
+              Find patient by ID or name
+            </div>
+          </div>
+        </a>
+
+        <a href="live_monitor.html" class="quick-action-btn qa-outline">
+          <div class="qa-icon" style="background:rgba(0,229,255,0.1)">
+            <img src="assets/img/lucid_monitor.png" alt="Monitor" class="lucid-icon">
+          </div>
+          <div>
+            <div style="font-weight:700">Start Live Monitoring</div>
+            <div style="font-size:12px;opacity:0.7;margin-top:2px">
+              Connect IoT device
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <!-- CARD 2: System Status -->
+      <div class="glass-card">
+        <div class="section-title">📡 System Status</div>
+        <div class="section-subtitle">Real-time hardware health</div>
+
+        <div class="status-item">
+          <div class="status-label">
+            <div class="status-icon" style="background:rgba(0,229,255,0.1)">
+              <img src="assets/img/lucid_monitor.png" alt="IoT" class="lucid-icon">
+            </div>
+            IoT Device (Raspberry Pi)
+          </div>
+          <span class="badge badge-offline" id="iotStatus">
+            <span class="pulse-dot red"></span>Offline
+          </span>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">
+            <div class="status-icon" style="background:rgba(0,229,255,0.1)">
+              <img src="assets/img/lucid_ai_brain.png" alt="AI" class="lucid-icon">
+            </div>
+            AI Models (5 Models)
+          </div>
+          <span class="badge badge-offline" id="modelStatus">
+            <span class="pulse-dot red"></span>Not Loaded
+          </span>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">
+            <div class="status-icon" style="background:rgba(0,229,255,0.1)">
+              <img src="assets/img/lucid_database.png" alt="DB" class="lucid-icon">
+            </div>
+            Local Database
+          </div>
+          <span class="badge badge-offline" id="dbStatus">
+            <span class="pulse-dot red"></span>Disconnected
+          </span>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">
+            <div class="status-icon" style="background:rgba(0,229,255,0.1)">
+              <img src="assets/img/lucid_monitor.png" alt="ECG" class="lucid-icon">
+            </div>
+            ECG Sensor (AD8232)
+          </div>
+          <span class="badge badge-offline" id="ecgStatus">
+            <span class="pulse-dot red"></span>Not Detected
+          </span>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">
+            <div class="status-icon" style="background:rgba(0,229,255,0.1)">
+              <img src="assets/img/lucid_monitor.png" alt="PPG" class="lucid-icon">
+            </div>
+            Pulse Oximeter
+          </div>
+          <span class="badge badge-offline" id="ppgStatus">
+            <span class="pulse-dot red"></span>Not Detected
+          </span>
+        </div>
+
+        <div class="mt-3">
+          <button class="btn btn-outline btn-sm w-100"
+                  onclick="checkSystemStatus()">
+            🔄 Refresh Status
+          </button>
+        </div>
+      </div>
+
+      <!-- CARD 3: Research Details -->
+      <div class="glass-card">
+        <div class="section-title">🔬 Research Details</div>
+        <div class="section-subtitle">Model specifications</div>
+
+        <div class="research-item">
+          <div class="research-label">Project Title</div>
+          <div class="research-value">
+            Hybrid Deep Learning for Real-Time CVD Prediction Using IoT
+          </div>
+        </div>
+
+        <div class="research-item">
+          <div class="research-label">Architecture</div>
+          <div class="research-value">
+            Multi-Task CNN + BiLSTM + Attention
+          </div>
+        </div>
+
+        <div class="research-item">
+          <div class="research-label">Models</div>
+          <div class="research-value">
+            Arrhythmia • Heart Attack • Hypertension • Stroke • UCI
+          </div>
+        </div>
+
+        <div class="research-item">
+          <div class="research-label">Hardware</div>
+          <div class="research-value">
+            Raspberry Pi 4 • AD8232 • MAX30102 • ADS1115
+          </div>
+        </div>
+
+        <div class="research-item">
+          <div class="research-label">Best Accuracy</div>
+          <div class="research-value text-cyan">
+            Stroke: 97.06% | Arrhythmia: 95.13%
+          </div>
+        </div>
+
+        <div class="research-item">
+          <div class="research-label">Framework</div>
+          <div class="research-value">
+            TensorFlow Lite (Edge Deployment)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM CTA -->
+    <div class="glass-card bottom-cta">
+      <p style="color:var(--text-secondary);margin-bottom:20px;font-size:15px">
+        🚀 Select a patient profile and connect the IoT device
+        to begin real-time cardiovascular monitoring
+      </p>
+      <a href="live_monitor.html" class="btn btn-primary btn-lg">
+        📡 View Live Monitor
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  // Load stats on page load
+  window.onload = function() {
+    loadHomeStats();
+    checkSystemStatus();
+    setInterval(checkSystemStatus, 10000);
+  };
+
+  async function loadHomeStats() {
+    try {
+      const res  = await fetch('/api/stats?t=' + Date.now());
+      const data = await res.json();
+      document.getElementById('totalPatients').textContent =
+        data.total_patients || '0';
+      document.getElementById('totalReadings').textContent =
+        data.total_readings || '0';
+    } catch(e) {
+      document.getElementById('totalPatients').textContent = '—';
+      document.getElementById('totalReadings').textContent = '—';
+    }
+  }
+
+  async function checkSystemStatus() {
+    try {
+      const res  = await fetch('/api/status', {signal: AbortSignal.timeout(3000)});
+      const data = await res.json();
+
+      updateBadge('iotStatus',   data.iot_connected,   'Online',     'Offline');
+      updateBadge('modelStatus', data.models_loaded,   'Loaded (5)', 'Not Loaded');
+      updateBadge('dbStatus',    data.db_connected,    'Connected',  'Disconnected');
+      updateBadge('ecgStatus',   data.ecg_detected,    'Detected',   'Not Detected');
+      updateBadge('ppgStatus',   data.ppg_detected,    'Detected',   'Not Detected');
+    } catch(e) {
+      // Device offline — keep red badges
+    }
+  }
+
+  function updateBadge(id, condition, onText, offText) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (condition) {
+      el.className = 'badge badge-online';
+      el.innerHTML = `<span class="pulse-dot green"></span>${onText}`;
+    } else {
+      el.className = 'badge badge-offline';
+      el.innerHTML = `<span class="pulse-dot red"></span>${offText}`;
+    }
+  }
+</script>
+</body>
+</html>

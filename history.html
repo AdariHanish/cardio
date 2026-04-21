@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CardioCare AI — Patient History</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .search-card { max-width: 700px; margin: 0 auto 30px; }
+
+    .search-row {
+      display : flex;
+      gap     : 12px;
+    }
+
+    .search-row .form-input { flex: 1; }
+
+    /* Patient Info Card */
+    .patient-info-banner {
+      display               : grid;
+      grid-template-columns : auto 1fr auto;
+      gap                   : 24px;
+      align-items           : center;
+      padding               : 24px 28px;
+      background            : rgba(0,229,255,0.05);
+      border                : 1px solid var(--border-glass);
+      border-radius         : 16px;
+      margin-bottom         : 24px;
+      animation             : fadeInUp 0.4s ease;
+    }
+
+    .patient-avatar {
+      width         : 70px;
+      height        : 70px;
+      border-radius : 50%;
+      background    : linear-gradient(135deg, #00b4d8, #0077b6);
+      display       : flex;
+      align-items   : center;
+      justify-content: center;
+      font-size     : 28px;
+      box-shadow    : 0 0 20px rgba(0,180,216,0.3);
+    }
+
+    .patient-meta h3 {
+      font-size   : 20px;
+      font-weight : 700;
+      margin-bottom: 6px;
+    }
+
+    .patient-tags {
+      display : flex;
+      gap     : 8px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      padding       : 3px 10px;
+      border-radius : 12px;
+      font-size     : 12px;
+      background    : rgba(255,255,255,0.08);
+      color         : var(--text-secondary);
+    }
+
+    /* Reading Card */
+    .reading-card {
+      margin-bottom : 20px;
+      border-left   : 3px solid var(--cyan);
+      animation     : fadeInUp 0.5s ease;
+    }
+
+    .reading-header {
+      display         : flex;
+      justify-content : space-between;
+      align-items     : center;
+      margin-bottom   : 16px;
+    }
+
+    .reading-date {
+      font-size   : 13px;
+      color       : var(--text-secondary);
+    }
+
+    /* Disease Risk Row */
+    .disease-grid {
+      display               : grid;
+      grid-template-columns : 1fr 1fr;
+      gap                   : 16px;
+      margin-bottom         : 16px;
+    }
+
+    .disease-row {
+      padding       : 14px 16px;
+      background    : rgba(255,255,255,0.03);
+      border-radius : 12px;
+      border        : 1px solid rgba(255,255,255,0.06);
+    }
+
+    .disease-name {
+      font-size     : 12px;
+      color         : var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom : 8px;
+    }
+
+    .disease-risk {
+      display         : flex;
+      align-items     : center;
+      justify-content : space-between;
+      margin-bottom   : 6px;
+    }
+
+    .risk-pct {
+      font-size   : 22px;
+      font-weight : 700;
+    }
+
+    .stage-badge {
+      padding       : 3px 10px;
+      border-radius : 10px;
+      font-size     : 12px;
+      font-weight   : 600;
+    }
+
+    /* Condition Banner */
+    .condition-banner {
+      padding       : 14px 20px;
+      border-radius : 12px;
+      text-align    : center;
+      font-weight   : 600;
+      font-size     : 15px;
+      margin-top    : 10px;
+    }
+
+    .condition-good {
+      background : rgba(0,230,118,0.1);
+      color      : var(--green);
+      border     : 1px solid rgba(0,230,118,0.2);
+    }
+
+    .condition-moderate {
+      background : rgba(255,152,0,0.1);
+      color      : var(--orange);
+      border     : 1px solid rgba(255,152,0,0.2);
+    }
+
+    .condition-high {
+      background : rgba(255,68,68,0.1);
+      color      : var(--red);
+      border     : 1px solid rgba(255,68,68,0.2);
+    }
+
+    /* History Timeline */
+    .timeline {
+      position      : relative;
+      padding-left  : 30px;
+    }
+
+    .timeline::before {
+      content      : '';
+      position     : absolute;
+      left         : 10px; top : 0; bottom : 0;
+      width        : 2px;
+      background   : linear-gradient(180deg,
+        var(--cyan), transparent
+      );
+    }
+
+    .timeline-item {
+      position      : relative;
+      margin-bottom : 24px;
+    }
+
+    .timeline-dot {
+      position      : absolute;
+      left          : -25px;
+      top           : 6px;
+      width         : 12px;
+      height        : 12px;
+      border-radius : 50%;
+      background    : var(--cyan);
+      box-shadow    : 0 0 10px var(--cyan-glow);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity:0; transform:translateY(15px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <div class="brand-icon">
+        <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
+      </div>
+      <span class="brand-text">CardioCare AI</span>
+    </a>
+    <ul class="navbar-menu">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="new_patient.html">New Patient</a></li>
+      <li><a href="history.html" class="active">Patient History</a></li>
+      <li><a href="live_monitor.html">Live Monitor</a></li>
+      <li><a href="admin.html" class="navbar-admin-btn">⚙ Admin</a></li>
+    </ul>
+  </nav>
+
+  <div class="main-content">
+
+    <div style="text-align:center;margin-bottom:40px">
+      <div class="section-title" style="font-size:28px">
+        <svg class="lucid-svg lucid-svg-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Patient History
+      </div>
+      <p class="section-subtitle">
+        Search by Patient ID or Name to retrieve full history
+      </p>
+    </div>
+
+    <!-- Search Card -->
+    <div class="glass-card search-card">
+      <div id="alertBox"></div>
+      <div class="search-row">
+        <input type="text" class="form-input" id="searchInput"
+               placeholder="Enter Patient ID (e.g. 34213) or Name"
+               onkeydown="if(event.key==='Enter') searchPatient()">
+        <button class="btn btn-primary" onclick="searchPatient()">
+          🔍 Search
+        </button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text-muted);
+                  text-align:center">
+        Search by ID • Name • Age (shows age group)
+      </div>
+    </div>
+
+    <!-- Results Area -->
+    <div id="resultsArea" style="display:none">
+
+      <!-- Patient Info Banner -->
+      <div class="patient-info-banner" id="patientBanner">
+        <div class="patient-avatar" id="patientAvatar">
+          <svg class="lucid-svg" style="margin:0;width:32px;height:32px" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="patient-meta">
+          <h3 id="patientNameDisp">—</h3>
+          <div class="patient-tags" id="patientTags"></div>
+        </div>
+        <a id="startMonitorLink" href="live_monitor.html"
+           class="btn btn-primary">
+          <svg class="lucid-svg lucid-svg-sm" style="stroke:white" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          Start Monitoring
+        </a>
+      </div>
+
+      <!-- History Section -->
+      <div class="glass-card">
+        <div class="flex-between mb-3">
+          <div class="section-title">
+            <svg class="lucid-svg" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Health History
+          </div>
+          <span class="badge badge-online" id="readingCount">
+            0 Readings
+          </span>
+        </div>
+
+        <div class="timeline" id="historyTimeline">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="noHistory" style="display:none;text-align:center;
+             padding:40px;color:var(--text-secondary)">
+          <div style="font-size:40px;margin-bottom:16px">
+            <svg class="lucid-svg" style="width:48px;height:48px;opacity:0.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          No readings found for this patient yet.<br>
+          <a href="live_monitor.html" class="btn btn-outline mt-3">
+            <svg class="lucid-svg lucid-svg-sm" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            Start First Reading
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Age Group Results -->
+    <div id="ageGroupResults" style="display:none">
+      <div class="glass-card">
+        <div class="section-title mb-3">
+          <svg class="lucid-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Age Group Results
+        </div>
+        <div id="ageGroupTable"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/patients.js"></script>
+<script>
+  async function searchPatient() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) {
+      showAlert('alertBox', 'error', 'Please enter a search term.');
+      return;
+    }
+
+    // Check if pure number → age search
+    if (/^\d+$/.test(query) && parseInt(query) <= 120) {
+      await searchByAge(parseInt(query));
+      return;
+    }
+
+    try {
+      const res  = await fetch(
+        `/api/patients/search?q=${encodeURIComponent(query)}`
+      );
+      const data = await res.json();
+
+      if (!data.success || !data.patient) {
+        showAlert('alertBox', 'error',
+          'Patient not found. Check the ID or name.');
+        document.getElementById('resultsArea').style.display = 'none';
+        return;
+      }
+
+      displayPatient(data.patient, data.readings || []);
+
+    } catch(e) {
+      showAlert('alertBox', 'error',
+        'Cannot connect to database.');
+    }
+  }
+
+  function displayPatient(patient, readings) {
+    document.getElementById('ageGroupResults').style.display = 'none';
+    document.getElementById('resultsArea').style.display = 'block';
+
+    // Banner
+    const avatar = patient.gender === 'Female' ? '👩' : '👨';
+    document.getElementById('patientAvatar').textContent = avatar;
+    document.getElementById('patientNameDisp').textContent =
+      patient.name;
+
+    const tags = document.getElementById('patientTags');
+    tags.innerHTML = `
+      <span class="tag">ID: ${patient.patient_id}</span>
+      <span class="tag">Age: ${patient.age} yrs</span>
+      <span class="tag">Weight: ${patient.weight} kg</span>
+      <span class="tag">${patient.gender}</span>
+      <span class="tag">Registered: ${patient.registered_on}</span>
+    `;
+
+    document.getElementById('startMonitorLink').href =
+      `live_monitor.html?pid=${patient.patient_id}`;
+
+    // Readings
+    const count = readings.length;
+    document.getElementById('readingCount').textContent =
+      `${count} Reading${count !== 1 ? 's' : ''}`;
+
+    const timeline = document.getElementById('historyTimeline');
+    const noHist   = document.getElementById('noHistory');
+
+    if (count === 0) {
+      timeline.innerHTML = '';
+      noHist.style.display = 'block';
+      return;
+    }
+
+    noHist.style.display = 'none';
+    timeline.innerHTML = readings.map((r, i) =>
+      buildReadingHTML(r, i)
+    ).join('');
+  }
+
+  function buildReadingHTML(reading, index) {
+    const arr = reading.arrhythmia_risk || 0;
+    const ha  = reading.heartattack_risk || 0;
+    const htn = reading.hypertension_risk || 0;
+    const str = reading.stroke_risk || 0;
+    const max = Math.max(arr, ha, htn, str);
+
+    const condClass = max > 70 ? 'condition-high' :
+                      max > 40 ? 'condition-moderate' : 'condition-good';
+    const condText  = max > 70 ? '⚠️ High Risk — Consult Doctor' :
+                      max > 40 ? '🟡 Moderate — Monitor Closely' :
+                                 '✅ Good Overall Condition';
+
+    const getRiskColor = (v) =>
+      v > 70 ? 'var(--red)' :
+      v > 40 ? 'var(--orange)' : 'var(--green)';
+
+    const getStageClass = (v) =>
+      v > 70 ? 'background:rgba(255,68,68,0.2);color:var(--red)' :
+      v > 40 ? 'background:rgba(255,152,0,0.2);color:var(--orange)' :
+               'background:rgba(0,230,118,0.2);color:var(--green)';
+
+    const getStage = (v) =>
+      v > 70 ? 'Stage 4' :
+      v > 60 ? 'Stage 3' :
+      v > 30 ? 'Stage 2' : 'Stage 1';
+
+    return `
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="glass-card reading-card">
+        <div class="reading-header">
+          <div>
+            <div style="font-weight:700;font-size:16px">
+              Reading #${index + 1}
+            </div>
+            <div class="reading-date">
+              📅 ${reading.timestamp || 'Unknown date'}
+            </div>
+          </div>
+          <div style="text-align:right;font-size:13px;
+                      color:var(--text-secondary)">
+            HR: ${reading.heart_rate || '--'} bpm<br>
+            SpO2: ${reading.spo2 || '--'}%
+          </div>
+        </div>
+
+        <div class="disease-grid">
+          ${buildDiseaseBox('Arrhythmia', arr,
+             getRiskColor(arr), getStage(arr), getStageClass(arr))}
+          ${buildDiseaseBox('Heart Attack', ha,
+             getRiskColor(ha),  getStage(ha),  getStageClass(ha))}
+          ${buildDiseaseBox('Stroke Risk', str,
+             getRiskColor(str), getStage(str), getStageClass(str))}
+          ${buildDiseaseBox('Hypertension', htn,
+             getRiskColor(htn), getStage(htn), getStageClass(htn))}
+        </div>
+
+        <div class="condition-banner ${condClass}">
+          ${condText}
+        </div>
+
+        ${reading.future_risk ? `
+        <div class="divider"></div>
+        <div style="font-size:13px;color:var(--text-secondary)">
+          🔮 <strong>Future Prediction:</strong>
+          ${reading.future_risk}
+        </div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function buildDiseaseBox(name, risk, color, stage, stageClass) {
+    return `
+    <div class="disease-row">
+      <div class="disease-name">${name}</div>
+      <div class="disease-risk">
+        <span class="risk-pct" style="color:${color}">
+          ${risk.toFixed(1)}%
+        </span>
+        <span class="stage-badge" style="${stageClass}">
+          ${stage}
+        </span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill
+          ${risk > 70 ? 'progress-critical' :
+            risk > 40 ? 'progress-high' :
+            risk > 20 ? 'progress-medium' : 'progress-low'}"
+          style="width:${risk}%">
+        </div>
+      </div>
+    </div>`;
+  }
+
+  async function searchByAge(age) {
+    try {
+      const res  = await fetch(`/api/patients/age-group?age=${age}`);
+      const data = await res.json();
+
+      document.getElementById('resultsArea').style.display = 'none';
+      document.getElementById('ageGroupResults').style.display = 'block';
+
+      const ageMin = Math.max(0, age - 5);
+      const ageMax = age + 5;
+
+      let html = `
+        <p class="text-muted mb-3">
+          Showing patients aged ${ageMin}–${ageMax} years
+          (${data.patients?.length || 0} found)
+        </p>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Patient ID</th>
+              <th>Name</th>
+              <th>Age</th>
+              <th>Gender</th>
+              <th>Readings</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      if (!data.patients || data.patients.length === 0) {
+        html += `
+          <tr><td colspan="6" style="text-align:center;
+              color:var(--text-muted);padding:30px">
+            No patients found in this age group
+          </td></tr>`;
+      } else {
+        data.patients.forEach(p => {
+          html += `
+          <tr>
+            <td class="text-cyan">${p.patient_id}</td>
+            <td>${p.name}</td>
+            <td>${p.age} yrs</td>
+            <td>${p.gender}</td>
+            <td>${p.reading_count || 0}</td>
+            <td>
+              <button class="btn btn-outline btn-sm"
+                onclick="loadPatientById('${p.patient_id}')">
+                View
+              </button>
+            </td>
+          </tr>`;
+        });
+      }
+
+      html += '</tbody></table>';
+      document.getElementById('ageGroupTable').innerHTML = html;
+
+    } catch(e) {
+      showAlert('alertBox', 'error', 'Search failed.');
+    }
+  }
+
+  async function loadPatientById(pid) {
+    document.getElementById('searchInput').value = pid;
+    await searchPatient();
+  }
+</script>
+</body>
+</html>

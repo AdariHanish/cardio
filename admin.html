@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CardioCare AI — Admin Login</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .login-wrapper {
+      min-height      : 100vh;
+      display         : flex;
+      align-items     : center;
+      justify-content : center;
+      padding         : 20px;
+    }
+
+    .login-card {
+      width     : 100%;
+      max-width : 440px;
+      padding   : 48px 40px;
+      position  : relative;
+    }
+
+    .login-logo {
+      text-align    : center;
+      margin-bottom : 40px;
+    }
+
+    .login-icon {
+      width         : 80px;
+      height        : 80px;
+      background    : linear-gradient(135deg, var(--cyan), var(--blue-light));
+      border-radius : 20px;
+      display       : inline-flex;
+      align-items   : center;
+      justify-content: center;
+      font-size     : 36px;
+      margin-bottom : 16px;
+      box-shadow    : 0 0 40px var(--cyan-glow);
+      animation     : iconPulse 2s ease-in-out infinite;
+    }
+
+    .login-title {
+      font-family   : 'Orbitron', sans-serif;
+      font-size     : 22px;
+      font-weight   : 700;
+      color         : white;
+      margin-bottom : 6px;
+    }
+
+    .login-subtitle {
+      font-size : 14px;
+      color     : var(--text-secondary);
+    }
+
+    .lock-icon {
+      position  : absolute;
+      top       : -15px;
+      right     : -15px;
+      width     : 50px;
+      height    : 50px;
+      background: rgba(255,152,0,0.15);
+      border    : 1px solid rgba(255,152,0,0.3);
+      border-radius: 50%;
+      display   : flex;
+      align-items: center;
+      justify-content: center;
+      font-size : 22px;
+    }
+
+    .show-pwd-btn {
+      position   : absolute;
+      right      : 14px;
+      top        : 50%;
+      transform  : translateY(-50%);
+      background : none;
+      border     : none;
+      color      : var(--text-muted);
+      cursor     : pointer;
+      font-size  : 16px;
+    }
+
+    .pwd-wrapper { position: relative; }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <div class="login-wrapper">
+    <div class="glass-card login-card">
+
+      <div class="lock-icon">🔒</div>
+
+      <div class="login-logo">
+        <div class="login-icon">
+          <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
+        </div>
+        <div class="login-title">Admin Portal</div>
+        <div class="login-subtitle">
+          CardioCare — AI Secure Access
+        </div>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <form onsubmit="adminLogin(event)">
+        <div class="form-group">
+          <label class="form-label">👤 Username</label>
+          <input type="text" class="form-input" id="adminUser"
+                 placeholder="Enter admin username"
+                 required autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">🔑 Password</label>
+          <div class="pwd-wrapper">
+            <input type="password" class="form-input"
+                   id="adminPass" placeholder="Enter password"
+                   required>
+            <button type="button" class="show-pwd-btn"
+                    onclick="togglePwd()">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block"
+                id="loginBtn">
+          🔓 Access Dashboard
+        </button>
+      </form>
+
+      <div style="text-align:center;margin-top:24px;
+           font-size:12px;color:var(--text-muted)">
+        <a href="index.html" style="color:var(--cyan);
+           text-decoration:none">
+          ← Back to Dashboard
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  function togglePwd() {
+    const inp = document.getElementById('adminPass');
+    inp.type  = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  async function adminLogin(e) {
+    e.preventDefault();
+    const user = document.getElementById('adminUser').value.trim();
+    const pass = document.getElementById('adminPass').value;
+    const btn  = document.getElementById('loginBtn');
+
+    btn.disabled    = true;
+    btn.textContent = '⏳ Verifying...';
+
+    try {
+      const res  = await fetch('/api/admin/login', {
+        method  : 'POST',
+        headers : {'Content-Type': 'application/json'},
+        body    : JSON.stringify({username: user, password: pass})
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Store token
+        sessionStorage.setItem('adminToken', data.token);
+        sessionStorage.setItem('adminUser',  user);
+        window.location.href = 'admin_dashboard.html';
+      } else {
+        showAlert('alertBox', 'error',
+          'Invalid credentials. Access denied.');
+      }
+    } catch(e) {
+      showAlert('alertBox', 'error',
+        'Cannot reach server. Is Raspberry Pi running?');
+    }
+
+    btn.disabled    = false;
+    btn.textContent = '🔓 Access Dashboard';
+  }
+</script>
+</body>
+</html>
