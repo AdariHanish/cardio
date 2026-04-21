@@ -171,17 +171,25 @@ def admin_readings():
 
 @app.route('/api/admin/db/tables')
 def admin_tables():
-    token = request.headers.get('X-Admin-Token', '')
-    if not db.verify_token(token):
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    tables = db.get_table_names()
-    table_info = []
-    for t in tables:
-        info = db.get_table_info(t)
-        if info['success']:
-            table_info.append(info)
-    return jsonify({"success": True, "tables": table_info})
+    try:
+        token = request.headers.get('X-Admin-Token', '')
+        if not db.verify_token(token):
+            return jsonify({"error": "Unauthorized"}), 401
+        
+        tables = db.get_table_names()
+        table_info = []
+        for t in tables:
+            try:
+                info = db.get_table_info(t)
+                if info.get('success'):
+                    table_info.append(info)
+            except Exception as e:
+                print(f"[ERROR] Table info failed for {t}: {e}")
+                
+        return jsonify({"success": True, "tables": table_info})
+    except Exception as e:
+        print(f"[CRITICAL] admin_tables route failed: {e}")
+        return jsonify({"success": False, "message": f"Server introspection failed: {str(e)}"}), 500
 
 @app.route('/api/admin/db/tables/<table_name>')
 def admin_table_data(table_name):
