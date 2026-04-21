@@ -1,17 +1,15 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "routePrefix": "/",
-      "framework": "other",
-      "entrypoint": "."
-    },
-    "backend": {
-      "routePrefix": "/api",
-      "runtime": "@vercel/python",
-      "entrypoint": "api/index.py"
-    }
-  },
   "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "api/index.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
+    }
+  ],
   "env": {
     "PYTHONPATH": "backend"
   }
