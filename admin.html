@@ -157,25 +157,17 @@
     btn.textContent = '⏳ Verifying...';
 
     try {
-      const res  = await fetch('/api/admin/login', {
-        method  : 'POST',
-        headers : {'Content-Type': 'application/json'},
-        body    : JSON.stringify({username: user, password: pass})
-      });
-      const data = await res.json();
+      const data = await api.post('/api/admin/login', { username: user, password: pass });
 
       if (data.success) {
-        // Store token
         sessionStorage.setItem('adminToken', data.token);
         sessionStorage.setItem('adminUser',  user);
         window.location.href = 'admin_dashboard.html';
       } else {
-        showAlert('alertBox', 'error',
-          'Invalid credentials. Access denied.');
+        showAlert('alertBox', 'error', data.message || 'Invalid credentials. Access denied.');
       }
     } catch(e) {
-      showAlert('alertBox', 'error',
-        'Cannot reach server. Is Raspberry Pi running?');
+      showAlert('alertBox', 'error', 'Authentication failed. Please check your connection.');
     }
 
     btn.disabled    = false;

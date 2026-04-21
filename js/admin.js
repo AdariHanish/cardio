@@ -1050,15 +1050,7 @@ async function executeDeleteRow(tableName, rowId) {
     showModalLoading(modalBox, 'Deleting...');
 
     try {
-        const res = await fetch(
-            `${API_BASE}/api/admin/db/tables/` +
-            `${tableName}/rows/${rowId}`,
-            {
-                method: 'DELETE',
-                headers: { 'X-Admin-Token': token }
-            }
-        );
-        const data = await res.json();
+        const data = await api.delete(`/api/admin/db/tables/${tableName}/rows/${rowId}`);
 
         if (data.success) {
             showModalSuccess(
@@ -1116,32 +1108,19 @@ function showSection(name) {
     }
 }
 
-// =============================================================
-// ALL READINGS VIEW
-// =============================================================
 async function loadAllReadings() {
     const tbody = document.getElementById('readingsTableBody');
     if (!tbody) return;
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="9" style="text-align:center;
-                padding:20px">
+            <td colspan="9" style="text-align:center; padding:20px">
                 <div class="spinner"></div>
             </td>
         </tr>`;
 
     try {
-        const res = await fetch(
-            `${API_BASE}/api/admin/readings`,
-            {
-                headers: {
-                    'X-Admin-Token':
-                        sessionStorage.getItem('adminToken')
-                }
-            }
-        );
-        const data = await res.json();
+        const data = await api.get('/api/admin/readings');
         const readings = data.readings || [];
 
         if (readings.length === 0) {
@@ -1168,20 +1147,16 @@ async function loadAllReadings() {
                     style="font-weight:600">
                     ${r.patient_id}
                 </td>
-                <td style="color:${getRiskColor(r.arrhythmia_risk || 0)
-            };font-weight:600">
+                <td style="color:${getRiskColor(r.arrhythmia_risk || 0)};font-weight:600">
                     ${(r.arrhythmia_risk || 0).toFixed(1)}%
                 </td>
-                <td style="color:${getRiskColor(r.heartattack_risk || 0)
-            };font-weight:600">
+                <td style="color:${getRiskColor(r.heartattack_risk || 0)};font-weight:600">
                     ${(r.heartattack_risk || 0).toFixed(1)}%
                 </td>
-                <td style="color:${getRiskColor(r.stroke_risk || 0)
-            };font-weight:600">
+                <td style="color:${getRiskColor(r.stroke_risk || 0)};font-weight:600">
                     ${(r.stroke_risk || 0).toFixed(1)}%
                 </td>
-                <td style="color:${getRiskColor(r.hypertension_risk || 0)
-            };font-weight:600">
+                <td style="color:${getRiskColor(r.hypertension_risk || 0)};font-weight:600">
                     ${(r.hypertension_risk || 0).toFixed(1)}%
                 </td>
                 <td>${r.heart_rate || '--'}</td>
@@ -1190,13 +1165,10 @@ async function loadAllReadings() {
                     <button
                         class="btn btn-sm"
                         style="background:rgba(255,68,68,0.15);
-                               color:var(--red);
-                               border:1px solid
-                               rgba(255,68,68,0.3)"
-                        onclick="confirmDeleteReading(
-                            ${r.id},
-                            ${readings.indexOf(r) + 1}
-                        )">
+                                color:var(--red);
+                                border:1px solid
+                                rgba(255,68,68,0.3)"
+                        onclick="confirmDeleteReading(${r.id}, ${readings.indexOf(r) + 1})">
                         🗑
                     </button>
                 </td>
@@ -1239,29 +1211,17 @@ async function updateCredentials() {
     }
 
     try {
-        const res = await fetch(
-            `${API_BASE}/api/admin/update-creds`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Admin-Token':
-                        sessionStorage.getItem('adminToken')
-                },
-                body: JSON.stringify({
-                    username: user,
-                    password: pass
-                })
-            }
-        );
-        const data = await res.json();
+        const data = await api.post('/api/admin/update-creds', {
+            username: user,
+            password: pass
+        });
 
         if (data.success) {
             alert('✅ Credentials updated successfully!\n' +
                 'Please log in again with new credentials.');
             adminLogout();
         } else {
-            alert('❌ Failed to update credentials.');
+            alert(`❌ Failed to update credentials: ${data.message || 'Unknown error'}`);
         }
 
     } catch (e) {
