@@ -343,7 +343,7 @@
             <div class="status-icon" style="background:rgba(0,229,255,0.1)">
               <img src="assets/img/lucid_database.png" alt="DB" class="lucid-icon">
             </div>
-            Local Database
+            TiDB Cloud Database
           </div>
           <span class="badge badge-offline" id="dbStatus">
             <span class="pulse-dot red"></span>Disconnected
@@ -455,31 +455,25 @@
   };
 
   async function loadHomeStats() {
-    try {
-      const res  = await fetch('/api/stats?t=' + Date.now());
-      const data = await res.json();
-      document.getElementById('totalPatients').textContent =
-        data.total_patients || '0';
-      document.getElementById('totalReadings').textContent =
-        data.total_readings || '0';
-    } catch(e) {
+    const data = await api.get('/api/stats');
+    if (data.success !== false) {
+      document.getElementById('totalPatients').textContent = data.total_patients || '0';
+      document.getElementById('totalReadings').textContent = data.total_readings || '0';
+    } else {
       document.getElementById('totalPatients').textContent = '—';
       document.getElementById('totalReadings').textContent = '—';
     }
   }
 
   async function checkSystemStatus() {
-    try {
-      const res  = await fetch('/api/status', {signal: AbortSignal.timeout(3000)});
-      const data = await res.json();
-
+    const data = await api.get('/api/status');
+    
+    if (data.success !== false) {
       updateBadge('iotStatus',   data.iot_connected,   'Online',     'Offline');
       updateBadge('modelStatus', data.models_loaded,   'Loaded (5)', 'Not Loaded');
       updateBadge('dbStatus',    data.db_connected,    'Connected',  'Disconnected');
       updateBadge('ecgStatus',   data.ecg_detected,    'Detected',   'Not Detected');
       updateBadge('ppgStatus',   data.ppg_detected,    'Detected',   'Not Detected');
-    } catch(e) {
-      // Device offline — keep red badges
     }
   }
 

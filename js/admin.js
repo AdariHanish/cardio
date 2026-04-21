@@ -37,28 +37,15 @@ async function loadAdminData() {
 // STATS
 // =============================================================
 async function loadStats() {
-    try {
-        const res = await fetch(
-            `${API_BASE}/api/admin/stats`,
-            {
-                headers: {
-                    'X-Admin-Token':
-                        sessionStorage.getItem('adminToken')
-                }
-            }
-        );
-        const data = await res.json();
+    const data = await api.get('/api/admin/stats');
+    if (!data.success) return;
 
-        setEl('statPatients', data.total_patients || '0');
-        setEl('statReadings', data.total_readings || '0');
-        setEl('statToday', data.today_readings || '0');
-        setEl('totalPat', data.total_patients || '0');
-        setEl('totalRead', data.total_readings || '0');
-        setEl('dbSize', data.db_size_mb || '< 1');
-
-    } catch (e) {
-        console.warn('[ADMIN] Stats load failed:', e);
-    }
+    setEl('statPatients', data.total_patients || '0');
+    setEl('statReadings', data.total_readings || '0');
+    setEl('statToday', data.today_readings || '0');
+    setEl('totalPat', data.total_patients || '0');
+    setEl('totalRead', data.total_readings || '0');
+    setEl('dbSize', data.db_size_mb || '< 1');
 }
 
 // =============================================================
@@ -69,39 +56,26 @@ async function loadPatients() {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" style="text-align:center;
-                    padding:30px">
+                <td colspan="9" style="text-align:center; padding:30px">
                     <div class="spinner"></div>
-                    <div style="margin-top:12px;
-                                color:var(--text-secondary)">
+                    <div style="margin-top:12px; color:var(--text-secondary)">
                         Loading patients...
                     </div>
                 </td>
             </tr>`;
     }
 
-    try {
-        const res = await fetch(
-            `${API_BASE}/api/admin/patients`,
-            {
-                headers: {
-                    'X-Admin-Token':
-                        sessionStorage.getItem('adminToken')
-                }
-            }
-        );
-        const data = await res.json();
+    const data = await api.get('/api/admin/patients');
+    
+    if (data.success) {
         allPatients = data.patients || [];
         renderPatientsTable(allPatients);
-
-    } catch (e) {
+    } else {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" style="text-align:center;
-                        color:var(--red);padding:30px">
-                        ❌ Failed to load patients.
-                        Is the server running?
+                    <td colspan="9" style="text-align:center; color:var(--red); padding:30px">
+                        ❌ ${data.message || 'Failed to load patients'}
                     </td>
                 </tr>`;
         }
@@ -301,166 +275,78 @@ async function loadPatientHistoryInModal() {
         accordion.innerHTML = `
             <div style="text-align:center;padding:30px">
                 <div class="spinner"></div>
-                <div style="margin-top:12px;
-                             color:var(--text-secondary)">
+                <div style="margin-top:12px; color:var(--text-secondary)">
                     Loading history...
                 </div>
             </div>`;
     }
 
-    try {
-        const res = await fetch(
-            `${API_BASE}/api/patients/` +
-            `${currentPatient.patient_id}/readings`,
-            {
-                headers: {
-                    'X-Admin-Token':
-                        sessionStorage.getItem('adminToken')
-                }
-            }
-        );
-        const data = await res.json();
-        const readings = data.readings || [];
+    const data = await api.get(`/api/admin/readings?patient_id=${currentPatient.patient_id}`);
+    const readings = data.readings || [];
 
-        if (!accordion) return;
+    if (!accordion) return;
 
-        if (readings.length === 0) {
-            accordion.innerHTML = `
-                <div style="text-align:center;padding:40px;
-                             color:var(--text-muted)">
-                    <div style="font-size:36px;
-                                 margin-bottom:12px">📭</div>
-                    No readings recorded yet for this patient.
-                </div>`;
-            return;
-        }
-
-        accordion.innerHTML = readings.map((r, i) => {
-            const maxR = Math.max(
-                r.arrhythmia_risk || 0,
-                r.heartattack_risk || 0,
-                r.stroke_risk || 0,
-                r.hypertension_risk || 0
-            );
-
-            return `
-            <div class="accordion-item">
-                <div class="accordion-header"
-                     onclick="toggleAccordion(this)">
-
-                    <div>
-                        <span style="font-weight:700">
-                            Reading #${i + 1}
-                        </span>
-                        <span style="font-size:12px;
-                                      color:var(--text-secondary);
-                                      margin-left:12px">
-                            ${formatTimestamp(r.timestamp)}
-                        </span>
-                    </div>
-
-                    <div style="display:flex;
-                                 align-items:center;
-                                 gap:10px">
-                        <span class="badge ${maxR > 70
-                    ? 'badge-offline'
-                    : 'badge-online'
-                }" style="font-size:11px">
-                            Max: ${maxR.toFixed(0)}%
-                        </span>
-                        <button
-                            class="btn btn-sm"
-                            style="background:rgba(255,68,68,0.15);
-                                   color:var(--red);
-                                   border:1px solid
-                                   rgba(255,68,68,0.3);
-                                   padding:4px 10px;
-                                   font-size:11px"
-                            onclick="event.stopPropagation();
-                                     confirmDeleteReading(
-                                         ${r.id}, ${i + 1}
-                                     )"
-                            title="Delete this reading">
-                            🗑
-                        </button>
-                        <span style="color:var(--text-muted)">
-                            ▼
-                        </span>
-                    </div>
-                </div>
-
-                <div class="accordion-body">
-                    <div class="risk-grid-mini">
-                        ${buildMiniRisk(
-                    '🔴 Arrhythmia',
-                    r.arrhythmia_risk || 0
-                )}
-                        ${buildMiniRisk(
-                    '❤️ Heart Attack',
-                    r.heartattack_risk || 0
-                )}
-                        ${buildMiniRisk(
-                    '🧠 Stroke Risk',
-                    r.stroke_risk || 0
-                )}
-                        ${buildMiniRisk(
-                    '💊 Hypertension',
-                    r.hypertension_risk || 0
-                )}
-                    </div>
-
-                    <div style="display:flex;gap:20px;
-                                 font-size:13px;
-                                 color:var(--text-secondary);
-                                 flex-wrap:wrap;
-                                 padding-top:10px;
-                                 border-top:1px solid
-                                 rgba(255,255,255,0.05);
-                                 margin-top:10px">
-                        <span>❤️ HR: ${r.heart_rate || '--'} bpm</span>
-                        <span>🫁 SpO2: ${r.spo2 || '--'}%</span>
-                        <span>🩸 BP: ${r.sbp || '--'}/${r.dbp || '--'} mmHg</span>
-                        <span>⏱ PTT: ${r.ptt_ms || '--'} ms</span>
-                    </div>
-
-                    ${r.future_risk ? `
-                    <div style="margin-top:12px;
-                                 padding:10px 14px;
-                                 background:rgba(0,229,255,0.05);
-                                 border:1px solid rgba(0,229,255,0.15);
-                                 border-radius:8px;
-                                 font-size:13px;
-                                 color:var(--text-secondary)">
-                        🔮 <strong>Future Prediction:</strong>
-                        ${r.future_risk}
-                    </div>` : ''}
-
-                    ${r.overall_condition ? `
-                    <div style="margin-top:10px;
-                                 padding:10px 14px;
-                                 border-radius:8px;
-                                 font-size:13px;
-                                 font-weight:600;
-                                 ${getConditionStyle(
-                    r.overall_condition
-                )}">
-                        📋 ${r.overall_condition}
-                    </div>` : ''}
-                </div>
+    if (!data.success) {
+        accordion.innerHTML = `
+            <div style="color:var(--red); text-align:center; padding:20px">
+                ❌ ${data.message || 'Failed to load history'}
             </div>`;
-        }).join('');
-
-    } catch (e) {
-        if (accordion) {
-            accordion.innerHTML = `
-                <div style="color:var(--red);
-                             text-align:center;
-                             padding:20px">
-                    ❌ Failed to load history.
-                    Check server connection.
-                </div>`;
-        }
+        return;
     }
+
+    if (readings.length === 0) {
+        accordion.innerHTML = `
+            <div style="text-align:center;padding:40px; color:var(--text-muted)">
+                <div style="font-size:36px; margin-bottom:12px">📭</div>
+                No readings recorded yet for this patient.
+            </div>`;
+        return;
+    }
+
+    accordion.innerHTML = readings.map((r, i) => {
+        const maxR = Math.max(
+            r.arrhythmia_risk || 0,
+            r.heartattack_risk || 0,
+            r.stroke_risk || 0,
+            r.hypertension_risk || 0
+        );
+
+        return `
+        <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div>
+                    <span style="font-weight:700">Reading #${i + 1}</span>
+                    <span style="font-size:12px; color:var(--text-secondary); margin-left:12px">
+                        ${formatTimestamp(r.timestamp)}
+                    </span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px">
+                    <span class="badge ${maxR > 70 ? 'badge-offline' : 'badge-online'}" style="font-size:11px">
+                        Max: ${maxR.toFixed(0)}%
+                    </span>
+                    <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 10px; font-size:11px"
+                        onclick="event.stopPropagation(); confirmDeleteReading(${r.id}, ${i + 1})" title="Delete this reading">🗑</button>
+                    <span style="color:var(--text-muted)">▼</span>
+                </div>
+            </div>
+            <div class="accordion-body">
+                <div class="risk-grid-mini">
+                    ${buildMiniRisk('🔴 Arrhythmia', r.arrhythmia_risk || 0)}
+                    ${buildMiniRisk('❤️ Heart Attack', r.heartattack_risk || 0)}
+                    ${buildMiniRisk('🧠 Stroke Risk', r.stroke_risk || 0)}
+                    ${buildMiniRisk('💊 Hypertension', r.hypertension_risk || 0)}
+                </div>
+                <div style="display:flex;gap:20px; font-size:13px; color:var(--text-secondary); flex-wrap:wrap; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); margin-top:10px">
+                    <span>❤️ HR: ${r.heart_rate || '--'} bpm</span>
+                    <span>🫁 SpO2: ${r.spo2 || '--'}%</span>
+                    <span>🩸 BP: ${r.sbp || '--'}/${r.dbp || '--'} mmHg</span>
+                    <span>⏱ PTT: ${r.ptt_ms || '--'} ms</span>
+                </div>
+                ${r.future_risk ? `<div style="margin-top:12px; padding:10px 14px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.15); border-radius:8px; font-size:13px; color:var(--text-secondary)">🔮 <strong>Future Prediction:</strong> ${r.future_risk}</div>` : ''}
+                ${r.overall_condition ? `<div style="margin-top:10px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; ${getConditionStyle(r.overall_condition)}">📋 ${r.overall_condition}</div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
 }
 
 // =============================================================
@@ -566,53 +452,20 @@ function confirmDeletePatient(patientId, patientName,
 // DELETE PATIENT — Execute
 // =============================================================
 async function executeDeletePatient(patientId) {
-    const token = sessionStorage.getItem('adminToken');
-    const modalBox = document.querySelector(
-        '#deleteModal .modal-box'
-    );
-
+    const modalBox = document.querySelector('#deleteModal .modal-box');
     showModalLoading(modalBox, 'Deleting patient...');
 
-    try {
-        const res = await fetch(
-            `${API_BASE}/api/admin/patients/` +
-            `${patientId}/delete`,
-            {
-                method: 'DELETE',
-                headers: {
-                    'X-Admin-Token': token,
-                    'Content-Type': 'application/json',
-                }
-            }
-        );
-        const data = await res.json();
+    const data = await api.delete(`/api/admin/patients/${patientId}/delete`);
 
-        if (data.success) {
-            showModalSuccess(
-                modalBox,
-                'Patient Deleted!',
-                `${data.message}<br>
-                 <span style="color:var(--orange);
-                               font-size:13px">
-                     ${data.readings_deleted || 0}
-                     readings also deleted
-                 </span>`
-            );
-            setTimeout(async () => {
-                closeDeleteModal();
-                closeModal();
-                await loadAdminData();
-            }, 1500);
-
-        } else {
-            showModalError(
-                modalBox,
-                data.message || 'Delete failed'
-            );
-        }
-
-    } catch (e) {
-        showModalError(modalBox, 'Connection error');
+    if (data.success) {
+        showModalSuccess(modalBox, 'Patient Deleted!', `${data.message || 'Removed from database'}`);
+        setTimeout(async () => {
+            closeDeleteModal();
+            closeModal();
+            await loadAdminData();
+        }, 1500);
+    } else {
+        showModalError(modalBox, data.message || 'Delete failed');
     }
 }
 
@@ -669,46 +522,21 @@ function confirmDeleteReading(readingId, readingNumber) {
 // DELETE READING — Execute
 // =============================================================
 async function executeDeleteReading(readingId) {
-    const token = sessionStorage.getItem('adminToken');
-    const modalBox = document.querySelector(
-        '#deleteModal .modal-box'
-    );
-
+    const modalBox = document.querySelector('#deleteModal .modal-box');
     showModalLoading(modalBox, 'Deleting reading...');
 
-    try {
-        const res = await fetch(
-            `${API_BASE}/api/admin/readings/` +
-            `${readingId}/delete`,
-            {
-                method: 'DELETE',
-                headers: { 'X-Admin-Token': token }
-            }
-        );
-        const data = await res.json();
+    const data = await api.delete(`/api/admin/readings/${readingId}/delete`);
 
-        if (data.success) {
-            showModalSuccess(
-                modalBox,
-                'Reading Deleted!',
-                data.message || 'Successfully removed'
-            );
-            setTimeout(async () => {
-                closeDeleteModal();
-                await loadPatientHistoryInModal();
-                await loadPatients();
-                await loadStats();
-            }, 1200);
-
-        } else {
-            showModalError(
-                modalBox,
-                data.message || 'Delete failed'
-            );
-        }
-
-    } catch (e) {
-        showModalError(modalBox, 'Connection error');
+    if (data.success) {
+        showModalSuccess(modalBox, 'Reading Deleted!', data.message || 'Successfully removed');
+        setTimeout(async () => {
+            closeDeleteModal();
+            await loadPatientHistoryInModal();
+            await loadPatients();
+            await loadStats();
+        }, 1200);
+    } else {
+        showModalError(modalBox, data.message || 'Delete failed');
     }
 }
 
@@ -716,148 +544,46 @@ async function executeDeleteReading(readingId) {
 // DATABASE TABLE VIEWER
 // =============================================================
 async function loadDbTables() {
-    const container = document.getElementById(
-        'dbTablesContent'
-    );
+    const container = document.getElementById('dbTablesContent');
     if (!container) return;
 
-    container.innerHTML = `
-        <div style="text-align:center;padding:30px">
-            <div class="spinner"></div>
-            <div style="margin-top:12px;
-                         color:var(--text-secondary)">
-                Loading database tables...
-            </div>
-        </div>`;
+    container.innerHTML = `<div style="text-align:center;padding:30px"><div class="spinner"></div><div style="margin-top:12px; color:var(--text-secondary)">Loading database tables...</div></div>`;
 
-    try {
-        console.log('[ADMIN] Fetching database tables...');
-        const res = await fetch(
-            `${API_BASE}/api/admin/db/tables`,
-            {
-                headers: {
-                    'X-Admin-Token':
-                        sessionStorage.getItem('adminToken')
-                }
-            }
-        );
-        console.log('[ADMIN] Tables response status:', res.status);
-        const data = await res.json();
-        console.log('[ADMIN] Tables data:', data);
+    const data = await api.get('/api/admin/db/tables');
 
-        if (!data.success) {
-            container.innerHTML = `
-                <div class="alert alert-error">
-                    ❌ Failed to load tables: ${data.message || 'Unknown server error'}
-                </div>`;
-            return;
-        }
-
-        // Table cards
-        let html = `
-            <div style="display:grid;gap:16px;
-                         margin-bottom:24px">
-        `;
-
-        data.tables.forEach(table => {
-            const colList = table.columns
-                .map(c => c.name)
-                .join(', ');
-
-            const icon =
-                table.table_name === 'patients' ? '👥' :
-                    table.table_name === 'readings' ? '📊' :
-                        table.table_name === 'admin' ? '🛡️' : '📋';
-
-            const isActive =
-                table.table_name === currentTableName;
-
-            html += `
-            <div style="padding:20px;
-                         background:var(--bg-card);
-                         backdrop-filter:blur(20px);
-                         border:1px solid ${isActive
-                    ? 'var(--cyan)'
-                    : 'var(--border-glass)'
-                };
-                         border-radius:16px;
-                         cursor:pointer;
-                         transition:var(--transition);
-                         ${isActive
-                    ? 'box-shadow:0 0 20px var(--cyan-glow);'
-                    : ''}"
-                 onclick="loadTableData('${table.table_name}', 1)"
-                 onmouseover="this.style.borderColor='var(--cyan)'"
-                 onmouseout="this.style.borderColor='${isActive
-                    ? 'var(--cyan)'
-                    : 'var(--border-glass)'
-                }'">
-
-                <div style="display:flex;
-                             justify-content:space-between;
-                             align-items:center;
-                             margin-bottom:12px">
-                    <div style="display:flex;
-                                 align-items:center;
-                                 gap:10px">
-                        <span style="font-size:24px">
-                            ${icon}
-                        </span>
-                        <div>
-                            <div style="font-weight:700;
-                                         font-size:16px;
-                                         color:var(--cyan)">
-                                ${table.table_name}
-                            </div>
-                            <div style="font-size:11px;
-                                         color:var(--text-muted)">
-                                ${table.columns.length} columns
-                            </div>
-                        </div>
-                    </div>
-                    <span class="badge badge-online"
-                          style="font-size:12px">
-                        ${table.row_count} rows
-                    </span>
-                </div>
-
-                <div style="font-size:12px;
-                             color:var(--text-secondary);
-                             line-height:1.8;
-                             padding:10px;
-                             background:rgba(255,255,255,0.03);
-                             border-radius:8px;
-                             margin-bottom:10px">
-                    ${colList}
-                </div>
-
-                <div style="text-align:center;
-                             font-size:12px;
-                             color:var(--cyan)">
-                    Click to view data →
-                </div>
-            </div>`;
-        });
-
-        html += `</div>
-            <div id="tableDataViewer"
-                 style="display:none">
-            </div>`;
-
-        container.innerHTML = html;
-
-        // Re-open previously selected table
-        if (currentTableName) {
-            loadTableData(currentTableName,
-                currentTablePage);
-        }
-
-    } catch (e) {
-        container.innerHTML = `
-            <div class="alert alert-error">
-                ❌ Cannot connect to database
-            </div>`;
+    if (!data.success) {
+        container.innerHTML = `<div class="alert alert-error">❌ ${data.message || 'Failed to load tables'}</div>`;
+        return;
     }
+
+    let html = `<div style="display:grid;gap:16px; margin-bottom:24px">`;
+    data.tables.forEach(table => {
+        const colList = table.columns.map(c => c.name).join(', ');
+        const icon = table.table_name === 'patients' ? '👥' : table.table_name === 'readings' ? '📊' : table.table_name === 'admin' ? '🛡️' : '📋';
+        const isActive = table.table_name === currentTableName;
+
+        html += `
+        <div style="padding:20px; background:var(--bg-card); backdrop-filter:blur(20px); border:1px solid ${isActive ? 'var(--cyan)' : 'var(--border-glass)'}; border-radius:16px; cursor:pointer; transition:var(--transition); ${isActive ? 'box-shadow:0 0 20px var(--cyan-glow);' : ''}"
+             onclick="loadTableData('${table.table_name}', 1)" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='${isActive ? 'var(--cyan)' : 'var(--border-glass)'}'">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+                <div style="display:flex; align-items:center; gap:10px">
+                    <span style="font-size:24px">${icon}</span>
+                    <div>
+                        <div style="font-weight:700; font-size:16px; color:var(--cyan)">${table.table_name}</div>
+                        <div style="font-size:11px; color:var(--text-muted)">${table.columns.length} columns</div>
+                    </div>
+                </div>
+                <span class="badge badge-online" style="font-size:12px">${table.row_count} rows</span>
+            </div>
+            <div style="font-size:12px; color:var(--text-secondary); line-height:1.8; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:10px">${colList}</div>
+            <div style="text-align:center; font-size:12px; color:var(--cyan)">Click to view data →</div>
+        </div>`;
+    });
+
+    html += `</div><div id="tableDataViewer" style="display:none"></div>`;
+    container.innerHTML = html;
+
+    if (currentTableName) loadTableData(currentTableName, currentTablePage);
 }
 
 // =============================================================
@@ -871,54 +597,25 @@ async function loadTableData(tableName, page) {
     if (!viewer) return;
 
     viewer.style.display = 'block';
-    viewer.innerHTML = `
-        <div style="text-align:center;padding:30px">
-            <div class="spinner"></div>
-            <div style="margin-top:12px;
-                         color:var(--text-secondary)">
-                Loading ${tableName} data...
-            </div>
-        </div>`;
-
+    viewer.innerHTML = `<div style="text-align:center;padding:30px"><div class="spinner"></div><div style="margin-top:12px; color:var(--text-secondary)">Loading ${tableName} data...</div></div>`;
     viewer.scrollIntoView({ behavior: 'smooth' });
 
-    try {
-        const params = new URLSearchParams({
-            page: currentTablePage,
-            per_page: 50,
-            search: currentSearch,
-            sort_by: currentSortBy,
-            sort_order: currentSortOrder,
-        });
+    const params = new URLSearchParams({
+        page: currentTablePage,
+        per_page: 50,
+        search: currentSearch,
+        sort_by: currentSortBy,
+        sort_order: currentSortOrder,
+    });
 
-        const res = await fetch(
-            `${API_BASE}/api/admin/db/tables/` +
-            `${tableName}?${params}`,
-            {
-                headers: {
-                    'X-Admin-Token':
-                        sessionStorage.getItem('adminToken')
-                }
-            }
-        );
-        const data = await res.json();
+    const data = await api.get(`/api/admin/db/tables/${tableName}?${params}`);
 
-        if (!data.success) {
-            viewer.innerHTML = `
-                <div class="alert alert-error">
-                    ❌ ${data.message || 'Failed to load data'}
-                </div>`;
-            return;
-        }
-
-        renderTableData(data, viewer);
-
-    } catch (e) {
-        viewer.innerHTML = `
-            <div class="alert alert-error">
-                ❌ Connection failed. Check server.
-            </div>`;
+    if (!data.success) {
+        viewer.innerHTML = `<div class="alert alert-error">❌ ${data.message || 'Failed to load data'}</div>`;
+        return;
     }
+
+    renderTableData(data, viewer);
 }
 
 // =============================================================

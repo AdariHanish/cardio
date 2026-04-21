@@ -31,29 +31,16 @@ function setPatient() {
   if (!pid) return;
 
   currentPatientId = pid;
-  document.getElementById('currentPatientInfo').textContent =
-    `Active Patient: ${pid}`;
+  document.getElementById('currentPatientInfo').textContent = `Active Patient: ${pid}`;
 
   // Notify backend
-  fetch(`${API_BASE}/api/monitor/set-patient`, {
-    method  : 'POST',
-    headers : {'Content-Type': 'application/json'},
-    body    : JSON.stringify({patient_id: pid})
-  }).catch(() => {});
-}
-
-function startPolling() {
-  // Poll every 500ms for live data
-  pollInterval = setInterval(fetchLiveData, 500);
+  api.post('/api/monitor/set-patient', { patient_id: pid }).catch(() => {});
 }
 
 async function fetchLiveData() {
-  try {
-    const res  = await fetchWithTimeout(
-      `${API_BASE}/api/monitor/live`, {}, 3000
-    );
-    const data = await res.json();
+  const data = await api.get('/api/monitor/live');
 
+  if (data.success !== false) {
     updateDeviceStatus(data.device_state || 'IDLE');
     updateVitals(data.vitals || {});
     updateECGBuffer(data.ecg_samples || []);
@@ -64,8 +51,7 @@ async function fetchLiveData() {
     } else if (data.countdown_remaining > 0) {
       updateCountdown(data.countdown_remaining);
     }
-
-  } catch(e) {
+  } else {
     updateDeviceStatus('OFFLINE');
   }
 }

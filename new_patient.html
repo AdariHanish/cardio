@@ -350,55 +350,47 @@
     btn.disabled     = true;
     btn.textContent  = '⏳ Registering...';
 
-    try {
-      const res = await fetch('/api/patients/register', {
-        method  : 'POST',
-        headers : {'Content-Type': 'application/json'},
-        body    : JSON.stringify({
-          name, age: parseInt(age),
-          weight: parseFloat(weight),
-          gender, contact, medical_history: history
-        })
-      });
+    const data = await api.post('/api/patients/register', {
+      name, 
+      age: parseInt(age),
+      weight: parseFloat(weight),
+      gender, 
+      contact, 
+      medical_history: history
+    });
 
-      const data = await res.json();
+    if (data.success) {
+      // Show result card
+      document.getElementById('idResultCard').style.display = 'block';
+      document.getElementById('generatedId').textContent    = data.patient_id;
+      document.getElementById('dispName').textContent   = name;
+      document.getElementById('dispAge').textContent    = age + ' years';
+      document.getElementById('dispWeight').textContent = weight + ' kg';
+      document.getElementById('dispGender').textContent = gender;
+      document.getElementById('dispDate').textContent   =
+        new Date().toLocaleDateString('en-IN', {
+          day:'2-digit', month:'long', year:'numeric'
+        });
 
-      if (data.success) {
-        // Show result card
-        document.getElementById('idResultCard').style.display = 'block';
-        document.getElementById('generatedId').textContent    = data.patient_id;
-        document.getElementById('dispName').textContent   = name;
-        document.getElementById('dispAge').textContent    = age + ' years';
-        document.getElementById('dispWeight').textContent = weight + ' kg';
-        document.getElementById('dispGender').textContent = gender;
-        document.getElementById('dispDate').textContent   =
-          new Date().toLocaleDateString('en-IN', {
-            day:'2-digit', month:'long', year:'numeric'
-          });
+      // Update monitor link with patient ID
+      document.getElementById('goMonitorBtn').href =
+        `live_monitor.html?pid=${data.patient_id}`;
 
-        // Update monitor link with patient ID
-        document.getElementById('goMonitorBtn').href =
-          `live_monitor.html?pid=${data.patient_id}`;
+      // Update steps
+      document.getElementById('step1Circle').className = 'step-circle done';
+      document.getElementById('step1Circle').textContent = '✓';
+      document.getElementById('step2Circle').className = 'step-circle done';
+      document.getElementById('step2Circle').textContent = '✓';
+      document.getElementById('step3Circle').className = 'step-circle active';
 
-        // Update steps
-        document.getElementById('step1Circle').className = 'step-circle done';
-        document.getElementById('step1Circle').textContent = '✓';
-        document.getElementById('step2Circle').className = 'step-circle done';
-        document.getElementById('step2Circle').textContent = '✓';
-        document.getElementById('step3Circle').className = 'step-circle active';
+      // Scroll to result
+      document.getElementById('idResultCard')
+        .scrollIntoView({behavior:'smooth'});
 
-        // Scroll to result
-        document.getElementById('idResultCard')
-          .scrollIntoView({behavior:'smooth'});
-
-        showAlert('alertBox', 'success',
-          `Patient registered! ID: ${data.patient_id}`);
-      } else {
-        showAlert('alertBox', 'error', data.message || 'Registration failed.');
-      }
-    } catch(err) {
-      showAlert('alertBox', 'error',
-        'Cannot connect to database. Is the Raspberry Pi running?');
+      showAlert('alertBox', 'success',
+        `Patient registered! ID: ${data.patient_id}`);
+    } else {
+      showAlert('alertBox', 'error', data.message || 'Registration failed.');
     }
 
     btn.disabled    = false;

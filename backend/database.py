@@ -1,40 +1,67 @@
 # =============================================================
-# CardioCare AI — SQLite Database Manager
-# Runs on Raspberry Pi
+# CardioCare AI — TiDB Database Manager (MySQL Compatible)
+# Distributed SQL for High Availability
 # =============================================================
 
-import sqlite3
+import pymysql
+import pymysql.cursors
 import os
 import hashlib
 import uuid
 import datetime
 import random
+import certifi
 from dotenv import load_dotenv
 
-# Load .env FIRST
+# Load .env
 load_dotenv()
 
-# DB path from .env (with fallback)
-# On Vercel, we must use /tmp since it's the only writable directory
-if os.getenv('VERCEL'):
-    DB_PATH = '/tmp/cardiocare.db'
-    print(f"[DB] Running on Vercel - Using temporary DB: {DB_PATH}")
-else:
-    env_db_path = os.getenv('DB_PATH', 'cardiocare.db')
-    if os.path.isabs(env_db_path):
-        DB_PATH = env_db_path
-    else:
-        # Resolve relative to the backend directory
-        DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), env_db_path))
+# =============================================================
+# CONNECTION CONFIG
+# =============================================================
+TIDB_HOST = os.environ.get('TIDB_HOST', 'localhost')
+TIDB_PORT = int(os.environ.get('TIDB_PORT', 4000))
+TIDB_USER = os.environ.get('TIDB_USER', 'root')
+TIDB_PASS = os.environ.get('TIDB_PASSWORD', '')
+TIDB_NAME = os.environ.get('TIDB_DATABASE', 'cardiocare')
 
-# =============================================================
-# CONNECTION
-# =============================================================
-def get_connection():
-    """Get SQLite connection"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_connection(with_db=True):
+    """Get TiDB (MySQL) connection"""
+    conn_params = {
+        'host': TIDB_HOST,
+        'port': TIDB_PORT,
+        'user': TIDB_USER,
+        'password': TIDB_PASS,
+        'cursorclass': pymysql.cursors.DictCursor,
+        'autocommit': True,
+        'ssl': {'ca': certifi.where()}
+    }
+    
+    if with_db:
+        conn_params['database'] = TIDB_NAME
+
+    try:
+        return pymysql.connect(**conn_params)
+    except pymysql.err.OperationalError as e:
+        if e.args[0] == 1049 and with_db: # Unknown database
+            print(f"[DB] Database '{TIDB_NAME}' does not exist. Creating it...")
+            try:
+                # Connect without database and create it
+                root_conn = get_connection(with_db=False)
+                if root_conn:
+                    with root_conn.cursor() as cur:
+                        cur.execute(f"CREATE DATABASE IF NOT EXISTS {TIDB_NAME}")
+                    root_conn.close()
+                    # Now try connecting again with the database
+                    return pymysql.connect(**conn_params)
+            except Exception as e2:
+                print(f"[DB] Failed to create database: {e2}")
+        
+        print(f"[DB] Connection Error: {e}")
+        return None
+    except Exception as e:
+        print(f"[DB] General Error: {e}")
+        return None
 
 # =============================================================
 # INITIALIZE DATABASE
@@ -42,118 +69,111 @@ def get_connection():
 def init_database():
     """Create all tables on first run + load admin from .env"""
     conn = get_connection()
-    cur  = conn.cursor()
-
-    # ── Patients Table ────────────────────────────────────────
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS patients (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            patient_id       TEXT    UNIQUE NOT NULL,
-            name             TEXT    NOT NULL,
-            age              INTEGER NOT NULL,
-            weight           REAL    NOT NULL,
-            gender           TEXT    NOT NULL,
-            contact          TEXT    DEFAULT '',
-            medical_history  TEXT    DEFAULT '',
-            registered_on    TEXT    NOT NULL
-        )
-    ''')
-
-    # ── Readings Table ────────────────────────────────────────
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS readings (
-            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-            patient_id         TEXT    NOT NULL,
-            timestamp          TEXT    NOT NULL,
-            heart_rate         REAL    DEFAULT 0,
-            spo2               REAL    DEFAULT 0,
-            sbp                REAL    DEFAULT 0,
-            dbp                REAL    DEFAULT 0,
-            ptt_ms             REAL    DEFAULT 0,
-            arrhythmia_risk    REAL    DEFAULT 0,
-            arrhythmia_type    TEXT    DEFAULT '',
-            heartattack_risk   REAL    DEFAULT 0,
-            stroke_risk        REAL    DEFAULT 0,
-            hypertension_risk  REAL    DEFAULT 0,
-            overall_condition  TEXT    DEFAULT '',
-            future_risk        TEXT    DEFAULT '',
-            FOREIGN KEY (patient_id)
-                REFERENCES patients(patient_id)
-        )
-    ''')
-
-    # ── Admin Table ───────────────────────────────────────────
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS admin (
-            id        INTEGER PRIMARY KEY AUTOINCREMENT,
-            username  TEXT UNIQUE NOT NULL,
-            password  TEXT NOT NULL,
-            token     TEXT DEFAULT ''
-        )
-    ''')
-
-    # ── Insert Admin From .env ────────────────────────────────
-    admin_user = os.getenv('ADMIN_USERNAME', 'admin')
-    admin_pass = os.getenv('ADMIN_PASSWORD', 'admin123')
-    admin_hash = hashlib.sha256(
-        admin_pass.encode()
-    ).hexdigest()
-
-    cur.execute('''
-        INSERT OR IGNORE INTO admin (username, password)
-        VALUES (?, ?)
-    ''', (admin_user, admin_hash))
-
-    conn.commit()
-    conn.close()
-
-    print(f"[DB] Database ready       : {DB_PATH}")
-    print(f"[DB] Admin user from .env : {admin_user}")
-
-    # ── Seed Sample Data if empty ─────────────────────────────
-    seed_sample_data()
-
-def seed_sample_data():
-    """Populate with sample data if the patients table is empty"""
-    conn = get_connection()
-    cur  = conn.cursor()
-
-    cur.execute("SELECT COUNT(*) FROM patients")
-    if cur.fetchone()[0] > 0:
-        conn.close()
+    if not conn:
+        print("[DB] Could not initialize database - check credentials.")
         return
 
-    print("[DB] 🧬 Seeding database with sample data...")
+    try:
+        with conn.cursor() as cur:
+            # ── Patients Table ────────────────────────────────────────
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS patients (
+                    id               INT PRIMARY KEY AUTO_INCREMENT,
+                    patient_id       VARCHAR(50) UNIQUE NOT NULL,
+                    name             VARCHAR(255) NOT NULL,
+                    age              INT NOT NULL,
+                    weight           FLOAT NOT NULL,
+                    gender           VARCHAR(20) NOT NULL,
+                    contact          VARCHAR(50) DEFAULT '',
+                    medical_history  TEXT,
+                    registered_on    DATETIME NOT NULL
+                )
+            ''')
 
+            # ── Readings Table ────────────────────────────────────────
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS readings (
+                    id                 INT PRIMARY KEY AUTO_INCREMENT,
+                    patient_id         VARCHAR(50) NOT NULL,
+                    timestamp          DATETIME NOT NULL,
+                    heart_rate         FLOAT DEFAULT 0,
+                    spo2               FLOAT DEFAULT 0,
+                    sbp                FLOAT DEFAULT 0,
+                    dbp                FLOAT DEFAULT 0,
+                    ptt_ms             FLOAT DEFAULT 0,
+                    arrhythmia_risk    FLOAT DEFAULT 0,
+                    arrhythmia_type    VARCHAR(100) DEFAULT '',
+                    heartattack_risk   FLOAT DEFAULT 0,
+                    stroke_risk        FLOAT DEFAULT 0,
+                    hypertension_risk  FLOAT DEFAULT 0,
+                    overall_condition  TEXT,
+                    future_risk        TEXT,
+                    INDEX idx_patient (patient_id)
+                )
+            ''')
+
+            # ── Admin Table ───────────────────────────────────────────
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS admin (
+                    id        INT PRIMARY KEY AUTO_INCREMENT,
+                    username  VARCHAR(100) UNIQUE NOT NULL,
+                    password  VARCHAR(255) NOT NULL,
+                    token     VARCHAR(255) DEFAULT ''
+                )
+            ''')
+
+            # ── Seed Admin User ───────────────────────────────────────
+            admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
+            admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
+            admin_hash = hashlib.sha256(admin_pass.encode()).hexdigest()
+
+            cur.execute("SELECT id FROM admin WHERE username = %s", (admin_user,))
+            if not cur.fetchone():
+                cur.execute("INSERT INTO admin (username, password) VALUES (%s, %s)",
+                             (admin_user, admin_hash))
+                print(f"[DB] Seeded admin user: {admin_user}")
+
+            # ── Seed Sample Data if empty ─────────────────────────────
+            cur.execute("SELECT COUNT(*) as count FROM patients")
+            if cur.fetchone()['count'] == 0:
+                print("[DB] Seeding database with sample data...")
+                seed_sample_data(conn)
+
+        print("[DB] Database logic successfully initialized.")
+    except Exception as e:
+        print(f"[DB] Initialization Error: {e}")
+    finally:
+        conn.close()
+
+def seed_sample_data(conn):
+    """Populate with sample data if the patients table is empty"""
     samples = [
         ('58806', 'Adari Hanish', 21, 72.5, 'Male',   '9876543210', 'None'),
         ('10234', 'Sarah Miller', 45, 64.0, 'Female', '9988776655', 'Hypertension'),
         ('44219', 'Robert Chen',  62, 81.0, 'Male',   '8877665544', 'Type 2 Diabetes')
     ]
 
-    for pid, name, age, weight, gender, contact, history in samples:
-        registered = (datetime.datetime.now() - datetime.timedelta(days=7)).isoformat()
-        cur.execute('''
-            INSERT INTO patients (patient_id, name, age, weight, gender, contact, medical_history, registered_on)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (pid, name, age, weight, gender, contact, history, registered))
-
-        # Add 2-3 sample readings for each patient
-        for i in range(random.randint(2, 4)):
-            ts = (datetime.datetime.now() - datetime.timedelta(days=i, hours=random.randint(1, 12))).isoformat()
-            hr = random.randint(65, 85)
-            sp = random.randint(95, 99)
-            risk = random.uniform(5, 35) if i > 0 else random.uniform(30, 75)
-            
+    with conn.cursor() as cur:
+        for pid, name, age, weight, gender, contact, history in samples:
+            registered = (datetime.datetime.now() - datetime.timedelta(days=7))
             cur.execute('''
-                INSERT INTO readings (patient_id, timestamp, heart_rate, spo2, sbp, dbp, 
-                                     arrhythmia_risk, heartattack_risk, stroke_risk, hypertension_risk)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (pid, ts, hr, sp, 120 + i, 80 + i, risk, risk*0.8, risk*0.5, risk+5))
+                INSERT INTO patients (patient_id, name, age, weight, gender, contact, medical_history, registered_on)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (pid, name, age, weight, gender, contact, history, registered))
 
-    conn.commit()
-    conn.close()
-    print("[DB] ✅ Seeding complete")
+            # Add 2-3 sample readings for each patient
+            for i in range(random.randint(2, 4)):
+                ts = (datetime.datetime.now() - datetime.timedelta(days=i, hours=random.randint(1, 12)))
+                hr = random.randint(65, 85)
+                sp = random.randint(95, 99)
+                risk = random.uniform(5, 35) if i > 0 else random.uniform(30, 75)
+                
+                cur.execute('''
+                    INSERT INTO readings (patient_id, timestamp, heart_rate, spo2, sbp, dbp, 
+                                         arrhythmia_risk, heartattack_risk, stroke_risk, hypertension_risk)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (pid, ts, hr, sp, 120 + i, 80 + i, risk, risk*0.8, risk*0.5, risk+5))
+    print("[DB] Seeding complete")
 
 # =============================================================
 # PATIENT FUNCTIONS
@@ -161,182 +181,169 @@ def seed_sample_data():
 def generate_patient_id():
     """Generate unique 5-digit random patient ID (e.g. 34213)"""
     conn = get_connection()
-    cur  = conn.cursor()
+    if not conn: return str(random.randint(10000, 99999))
+    
+    try:
+        with conn.cursor() as cur:
+            while True:
+                new_id = str(random.randint(10000, 99999))
+                cur.execute("SELECT patient_id FROM patients WHERE patient_id = %s", (new_id,))
+                if not cur.fetchone():
+                    return new_id
+    finally:
+        conn.close()
 
-    while True:
-        # Generate random 5-digit number (10000 to 99999)
-        new_id = str(random.randint(10000, 99999))
-        
-        # Check if it already exists
-        cur.execute("SELECT patient_id FROM patients WHERE patient_id = ?", (new_id,))
-        if not cur.fetchone():
-            conn.close()
-            return new_id
-
-def register_patient(name, age, weight, gender,
-                      contact='', medical_history=''):
+def register_patient(name, age, weight, gender, contact='', medical_history=''):
     """Register a new patient"""
-    conn       = get_connection()
-    cur        = conn.cursor()
-    pid        = generate_patient_id()
-    registered = datetime.datetime.now().isoformat()
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Database connection failed"}
+    
+    pid = generate_patient_id()
+    registered = datetime.datetime.now()
 
     try:
-        cur.execute('''
-            INSERT INTO patients
-            (patient_id, name, age, weight, gender,
-             contact, medical_history, registered_on)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            pid, name, age, weight,
-            gender, contact, medical_history, registered
-        ))
-        conn.commit()
+        with conn.cursor() as cur:
+            cur.execute('''
+                INSERT INTO patients (patient_id, name, age, weight, gender, contact, medical_history, registered_on)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (pid, name, age, weight, gender, contact, medical_history, registered))
         return {"success": True, "patient_id": pid}
-
     except Exception as e:
         return {"success": False, "message": str(e)}
-
     finally:
         conn.close()
 
 def search_patient(query):
     """Search patient by ID or name"""
     conn = get_connection()
-    cur  = conn.cursor()
-
-    cur.execute('''
-        SELECT p.*,
-               COUNT(r.id)      AS reading_count,
-               MAX(r.timestamp) AS last_visit
-        FROM   patients p
-        LEFT JOIN readings r
-               ON p.patient_id = r.patient_id
-        WHERE  p.patient_id = ?
-           OR  LOWER(p.name) LIKE LOWER(?)
-        GROUP  BY p.patient_id
-        LIMIT  1
-    ''', (query.upper(), f'%{query}%'))
-
-    row = cur.fetchone()
-    conn.close()
-
-    if not row:
-        return None
-    return dict(row)
+    if not conn: return None
+    
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT p.*,
+                       COUNT(r.id)      AS reading_count,
+                       MAX(r.timestamp) AS last_visit
+                FROM   patients p
+                LEFT JOIN readings r
+                       ON p.patient_id = r.patient_id
+                WHERE  p.patient_id = %s
+                   OR  LOWER(p.name) LIKE LOWER(%s)
+                GROUP  BY p.id
+                LIMIT  1
+            ''', (query.upper(), f'%{query}%'))
+            row = cur.fetchone()
+            if row and row['registered_on']:
+                row['registered_on'] = str(row['registered_on'])
+            if row and row['last_visit']:
+                row['last_visit'] = str(row['last_visit'])
+            return row
+    finally:
+        conn.close()
 
 def get_patient_readings(patient_id):
     """Get all readings for a patient (newest first)"""
     conn = get_connection()
-    cur  = conn.cursor()
-
-    cur.execute('''
-        SELECT * FROM readings
-        WHERE  patient_id = ?
-        ORDER  BY timestamp DESC
-    ''', (patient_id,))
-
-    rows = [dict(r) for r in cur.fetchall()]
-    conn.close()
-    return rows
+    if not conn: return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM readings WHERE patient_id = %s ORDER BY timestamp DESC', (patient_id,))
+            rows = cur.fetchall()
+            for r in rows:
+                if r['timestamp']: r['timestamp'] = str(r['timestamp'])
+            return rows
+    finally:
+        conn.close()
 
 def get_patients_by_age(age):
     """Get patients within ±5 years of given age"""
     conn = get_connection()
-    cur  = conn.cursor()
-
-    cur.execute('''
-        SELECT p.*,
-               COUNT(r.id) AS reading_count
-        FROM   patients p
-        LEFT JOIN readings r
-               ON p.patient_id = r.patient_id
-        WHERE  p.age BETWEEN ? AND ?
-        GROUP  BY p.patient_id
-        ORDER  BY p.age
-    ''', (max(0, age - 5), age + 5))
-
-    rows = [dict(r) for r in cur.fetchall()]
-    conn.close()
-    return rows
+    if not conn: return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT p.*, COUNT(r.id) AS reading_count
+                FROM   patients p
+                LEFT JOIN readings r ON p.patient_id = r.patient_id
+                WHERE  p.age BETWEEN %s AND %s
+                GROUP  BY p.id
+                ORDER  BY p.age
+            ''', (max(0, age - 5), age + 5))
+            rows = cur.fetchall()
+            for r in rows:
+                if r['registered_on']: r['registered_on'] = str(r['registered_on'])
+            return rows
+    finally:
+        conn.close()
 
 def get_all_patients():
     """Get all patients with reading count (admin)"""
     conn = get_connection()
-    cur  = conn.cursor()
-
-    cur.execute('''
-        SELECT p.*,
-               COUNT(r.id)      AS reading_count,
-               MAX(r.timestamp) AS last_visit
-        FROM   patients p
-        LEFT JOIN readings r
-               ON p.patient_id = r.patient_id
-        GROUP  BY p.patient_id
-        ORDER  BY p.registered_on DESC
-    ''')
-
-    rows = [dict(r) for r in cur.fetchall()]
-    conn.close()
-    return rows
+    if not conn: return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT p.*, COUNT(r.id) AS reading_count, MAX(r.timestamp) AS last_visit
+                FROM   patients p
+                LEFT JOIN readings r ON p.patient_id = r.patient_id
+                GROUP  BY p.id
+                ORDER  BY p.registered_on DESC
+            ''')
+            rows = cur.fetchall()
+            for r in rows:
+                if r['registered_on']: r['registered_on'] = str(r['registered_on'])
+                if r['last_visit']: r['last_visit'] = str(r['last_visit'])
+            return rows
+    finally:
+        conn.close()
 
 def get_all_readings(limit=100):
     """Get all readings newest first (admin)"""
     conn = get_connection()
-    cur  = conn.cursor()
-
-    cur.execute('''
-        SELECT * FROM readings
-        ORDER  BY timestamp DESC
-        LIMIT  ?
-    ''', (limit,))
-
-    rows = [dict(r) for r in cur.fetchall()]
-    conn.close()
-    return rows
+    if not conn: return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM readings ORDER BY timestamp DESC LIMIT %s', (limit,))
+            rows = cur.fetchall()
+            for r in rows:
+                if r['timestamp']: r['timestamp'] = str(r['timestamp'])
+            return rows
+    finally:
+        conn.close()
 
 # =============================================================
 # READINGS SAVE
 # =============================================================
 def save_reading(patient_id, vitals, predictions, future):
     """Save a complete reading to the database"""
-    conn      = get_connection()
-    cur       = conn.cursor()
-    timestamp = datetime.datetime.now().isoformat()
-
+    conn = get_connection()
+    if not conn: return False
+    timestamp = datetime.datetime.now()
     try:
-        cur.execute('''
-            INSERT INTO readings
-            (patient_id, timestamp,
-             heart_rate, spo2, sbp, dbp, ptt_ms,
-             arrhythmia_risk, arrhythmia_type,
-             heartattack_risk, stroke_risk,
-             hypertension_risk,
-             overall_condition, future_risk)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            patient_id,
-            timestamp,
-            vitals.get('heart_rate', 0),
-            vitals.get('spo2', 0),
-            predictions.get('hypertension', {}).get('est_sbp', 0),
-            predictions.get('hypertension', {}).get('est_dbp', 0),
-            predictions.get('hypertension', {}).get('ptt_ms',  0),
-            predictions.get('arrhythmia',   {}).get('risk_pct', 0),
-            predictions.get('arrhythmia',   {}).get('type', ''),
-            predictions.get('heartattack',  {}).get('risk_pct', 0),
-            predictions.get('stroke',       {}).get('risk_pct', 0),
-            predictions.get('hypertension', {}).get('risk_pct', 0),
-            future.get('overall', ''),
-            future.get('overall', ''),
-        ))
-        conn.commit()
+        with conn.cursor() as cur:
+            cur.execute('''
+                INSERT INTO readings
+                (patient_id, timestamp, heart_rate, spo2, sbp, dbp, ptt_ms,
+                 arrhythmia_risk, arrhythmia_type, heartattack_risk, stroke_risk,
+                 hypertension_risk, overall_condition, future_risk)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                patient_id, timestamp,
+                vitals.get('heart_rate', 0), vitals.get('spo2', 0),
+                predictions.get('hypertension', {}).get('est_sbp', 0),
+                predictions.get('hypertension', {}).get('est_dbp', 0),
+                predictions.get('hypertension', {}).get('ptt_ms',  0),
+                predictions.get('arrhythmia',   {}).get('risk_pct', 0),
+                predictions.get('arrhythmia',   {}).get('type', ''),
+                predictions.get('heartattack',  {}).get('risk_pct', 0),
+                predictions.get('stroke',       {}).get('risk_pct', 0),
+                predictions.get('hypertension', {}).get('risk_pct', 0),
+                future.get('overall', ''), future.get('overall', ''),
+            ))
         return True
-
     except Exception as e:
         print(f"[DB] Save reading error: {e}")
         return False
-
     finally:
         conn.close()
 
@@ -346,429 +353,181 @@ def save_reading(patient_id, vitals, predictions, future):
 def get_stats():
     """Get database statistics for dashboard"""
     conn = get_connection()
-    cur  = conn.cursor()
-
-    cur.execute("SELECT COUNT(*) FROM patients")
-    total_patients = cur.fetchone()[0]
-
-    cur.execute("SELECT COUNT(*) FROM readings")
-    total_readings = cur.fetchone()[0]
-
-    today = datetime.date.today().isoformat()
-    cur.execute(
-        "SELECT COUNT(*) FROM readings WHERE timestamp LIKE ?",
-        (f'{today}%',)
-    )
-    today_readings = cur.fetchone()[0]
-
-    conn.close()
-
-    db_size = (
-        round(os.path.getsize(DB_PATH) / (1024 * 1024), 2)
-        if os.path.exists(DB_PATH) else 0
-    )
-
-    return {
-        "total_patients" : total_patients,
-        "total_readings" : total_readings,
-        "today_readings" : today_readings,
-        "db_size_mb"     : db_size,
-    }
+    if not conn: return {"total_patients": 0, "total_readings": 0, "today_readings": 0, "db_size_mb": 0}
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) as count FROM patients")
+            total_patients = cur.fetchone()['count']
+            cur.execute("SELECT COUNT(*) as count FROM readings")
+            total_readings = cur.fetchone()['count']
+            today = datetime.date.today()
+            cur.execute("SELECT COUNT(*) as count FROM readings WHERE DATE(timestamp) = %s", (today,))
+            today_readings = cur.fetchone()['count']
+            
+            # DB size is harder to get in TiDB Cloud without special perms, returning 0
+            return {
+                "total_patients" : total_patients,
+                "total_readings" : total_readings,
+                "today_readings" : today_readings,
+                "db_size_mb"     : 0,
+            }
+    finally:
+        conn.close()
 
 # =============================================================
 # ADMIN AUTH
 # =============================================================
 def admin_login(username, password):
     """Verify admin credentials and return session token"""
-    conn   = get_connection()
-    cur    = conn.cursor()
+    conn = get_connection()
+    if not conn: return {"success": False}
     hashed = hashlib.sha256(password.encode()).hexdigest()
-
-    cur.execute(
-        "SELECT * FROM admin WHERE username = ? AND password = ?",
-        (username, hashed)
-    )
-    row = cur.fetchone()
-
-    if row:
-        token = str(uuid.uuid4())
-        cur.execute(
-            "UPDATE admin SET token = ? WHERE username = ?",
-            (token, username)
-        )
-        conn.commit()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM admin WHERE username = %s AND password = %s", (username, hashed))
+            if cur.fetchone():
+                token = str(uuid.uuid4())
+                cur.execute("UPDATE admin SET token = %s WHERE username = %s", (token, username))
+                return {"success": True, "token": token}
+        return {"success": False}
+    finally:
         conn.close()
-        return {"success": True, "token": token}
-
-    conn.close()
-    return {"success": False}
 
 def verify_token(token):
     """Verify admin session token"""
-    if not token:
-        return False
-
+    if not token: return False
     conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute("SELECT * FROM admin WHERE token = ?", (token,))
-    row = cur.fetchone()
-    conn.close()
-    return row is not None
+    if not conn: return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM admin WHERE token = %s", (token,))
+            return cur.fetchone() is not None
+    finally:
+        conn.close()
 
 def update_credentials(token, new_username, new_password):
     """Update admin credentials"""
-    if not verify_token(token):
-        return False
-
+    if not verify_token(token): return False
     hashed = hashlib.sha256(new_password.encode()).hexdigest()
-    conn   = get_connection()
-
+    conn = get_connection()
+    if not conn: return False
     try:
-        conn.execute(
-            "UPDATE admin SET username = ?, password = ? "
-            "WHERE token = ?",
-            (new_username, hashed, token)
-        )
-        conn.commit()
-        return True
+        with conn.cursor() as cur:
+            cur.execute("UPDATE admin SET username = %s, password = %s WHERE token = %s", (new_username, hashed, token))
+            return True
     except Exception as e:
         print(f"[DB] Update creds error: {e}")
         return False
     finally:
         conn.close()
+
 # =============================================================
 # DELETE PATIENT
 # =============================================================
 def delete_patient(patient_id, token):
-    """
-    Delete a patient and ALL their readings.
-    Requires valid admin token for safety.
-    """
-    if not verify_token(token):
-        return {"success": False, "message": "Unauthorized"}
-
+    """Delete a patient and ALL their readings"""
+    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
     conn = get_connection()
-    cur  = conn.cursor()
-
+    if not conn: return {"success": False, "message": "Connection failed"}
     try:
-        # Check patient exists first
-        cur.execute(
-            "SELECT * FROM patients WHERE patient_id = ?",
-            (patient_id,)
-        )
-        patient = cur.fetchone()
-
-        if not patient:
-            return {
-                "success": False,
-                "message": f"Patient {patient_id} not found"
-            }
-
-        patient_name = patient['name']
-
-        # Delete all readings first (foreign key)
-        cur.execute(
-            "DELETE FROM readings WHERE patient_id = ?",
-            (patient_id,)
-        )
-        readings_deleted = cur.rowcount
-
-        # Delete patient
-        cur.execute(
-            "DELETE FROM patients WHERE patient_id = ?",
-            (patient_id,)
-        )
-
-        conn.commit()
-
-        print(f"[DB] Deleted patient : {patient_id} ({patient_name})")
-        print(f"[DB] Readings deleted: {readings_deleted}")
-
-        return {
-            "success"         : True,
-            "message"         : f"Patient {patient_name} deleted",
-            "patient_id"      : patient_id,
-            "readings_deleted": readings_deleted
-        }
-
+        with conn.cursor() as cur:
+            cur.execute("SELECT name FROM patients WHERE patient_id = %s", (patient_id,))
+            patient = cur.fetchone()
+            if not patient: return {"success": False, "message": "Patient not found"}
+            name = patient['name']
+            cur.execute("DELETE FROM readings WHERE patient_id = %s", (patient_id,))
+            readings_deleted = cur.rowcount
+            cur.execute("DELETE FROM patients WHERE patient_id = %s", (patient_id,))
+            return {"success": True, "message": f"Patient {name} deleted", "readings_deleted": readings_deleted}
     except Exception as e:
-        print(f"[DB] Delete error: {e}")
         return {"success": False, "message": str(e)}
-
     finally:
         conn.close()
-
 
 def delete_reading(reading_id, token):
-    """
-    Delete a single reading by ID.
-    Requires valid admin token.
-    """
-    if not verify_token(token):
-        return {"success": False, "message": "Unauthorized"}
-
+    """Delete a single reading by ID"""
+    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
     conn = get_connection()
-    cur  = conn.cursor()
-
+    if not conn: return {"success": False, "message": "Connection failed"}
     try:
-        cur.execute(
-            "SELECT * FROM readings WHERE id = ?",
-            (reading_id,)
-        )
-        reading = cur.fetchone()
-
-        if not reading:
-            return {
-                "success": False,
-                "message": f"Reading {reading_id} not found"
-            }
-
-        cur.execute(
-            "DELETE FROM readings WHERE id = ?",
-            (reading_id,)
-        )
-        conn.commit()
-
-        return {
-            "success"   : True,
-            "message"   : f"Reading {reading_id} deleted",
-            "reading_id": reading_id
-        }
-
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM readings WHERE id = %s", (reading_id,))
+            if cur.rowcount == 0: return {"success": False, "message": "Reading not found"}
+            return {"success": True, "message": f"Reading {reading_id} deleted"}
     except Exception as e:
         return {"success": False, "message": str(e)}
-
     finally:
         conn.close()
+
 # =============================================================
 # DATABASE TABLE VIEWER FUNCTIONS
 # =============================================================
 def get_table_names():
     """Get all table names in the database"""
     conn = get_connection()
-    cur  = conn.cursor()
-    cur.execute("""
-        SELECT name FROM sqlite_master
-        WHERE type = 'table'
-        AND name NOT LIKE 'sqlite_%'
-        ORDER BY name
-    """)
-    tables = [row['name'] for row in cur.fetchall()]
-    conn.close()
-    return tables
-
+    if not conn: return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SHOW TABLES")
+            return [list(row.values())[0] for row in cur.fetchall()]
+    finally:
+        conn.close()
 
 def get_table_info(table_name):
-    """
-    Get column names and types for a table.
-    Uses PRAGMA to read table schema safely.
-    """
-    # Whitelist allowed table names to prevent SQL injection
+    """Get column names and types for a table"""
     allowed_tables = ['patients', 'readings', 'admin']
-    if table_name not in allowed_tables:
-        return {
-            "success" : False,
-            "message" : f"Table '{table_name}' not allowed"
-        }
-
+    if table_name not in allowed_tables: return {"success": False, "message": "Invalid table"}
     conn = get_connection()
-    cur  = conn.cursor()
-
-    # Get column info
-    cur.execute(f"PRAGMA table_info({table_name})")
-    columns = []
-    for row in cur.fetchall():
-        columns.append({
-            "cid"     : row['cid'],
-            "name"    : row['name'],
-            "type"    : row['type'],
-            "notnull" : row['notnull'],
-            "pk"      : row['pk'],
-        })
-
-    # Get row count
-    cur.execute(f"SELECT COUNT(*) as cnt FROM {table_name}")
-    row_count = cur.fetchone()['cnt']
-
-    conn.close()
-
-    return {
-        "success"   : True,
-        "table_name": table_name,
-        "columns"   : columns,
-        "row_count" : row_count,
-    }
-
-
-def get_table_data(table_name, page=1, per_page=50,
-                    search='', sort_by='id', sort_order='DESC'):
-    """
-    Get paginated data from a table.
-    Includes search across all text columns.
-    """
-    allowed_tables = ['patients', 'readings', 'admin']
-    if table_name not in allowed_tables:
-        return {
-            "success": False,
-            "message": f"Table '{table_name}' not allowed"
-        }
-
-    conn = get_connection()
-    cur  = conn.cursor()
-
-    # Get column names first
-    cur.execute(f"PRAGMA table_info({table_name})")
-    columns = [row['name'] for row in cur.fetchall()]
-
-    # Validate sort_by column
-    if sort_by not in columns:
-        sort_by = 'id'
-
-    # Validate sort order
-    sort_order = 'DESC' if sort_order.upper() == 'DESC' else 'ASC'
-
-    # Build search condition
-    search_clause = ""
-    search_params = []
-
-    if search and search.strip():
-        # Search across all TEXT columns
-        text_columns = []
-        cur.execute(f"PRAGMA table_info({table_name})")
-        for row in cur.fetchall():
-            col_type = row['type'].upper()
-            if col_type in ['TEXT', 'VARCHAR', '']:
-                text_columns.append(row['name'])
-
-        if text_columns:
-            conditions = [
-                f"CAST({col} AS TEXT) LIKE ?"
-                for col in text_columns
-            ]
-            search_clause = "WHERE " + " OR ".join(conditions)
-            search_params = [f"%{search}%"] * len(text_columns)
-
-    # Get total count (with search)
-    count_sql = f"SELECT COUNT(*) as cnt FROM {table_name} {search_clause}"
-    cur.execute(count_sql, search_params)
-    total_rows = cur.fetchone()['cnt']
-
-    # Calculate pagination
-    total_pages = max(1, (total_rows + per_page - 1) // per_page)
-    page        = max(1, min(page, total_pages))
-    offset      = (page - 1) * per_page
-
-    # Get data
-    data_sql = f"""
-        SELECT * FROM {table_name}
-        {search_clause}
-        ORDER BY {sort_by} {sort_order}
-        LIMIT ? OFFSET ?
-    """
-    cur.execute(data_sql, search_params + [per_page, offset])
-
-    rows = []
-    for row in cur.fetchall():
-        row_dict = dict(row)
-        # Mask password field for admin table
-        if table_name == 'admin' and 'password' in row_dict:
-            row_dict['password'] = '••••••••'
-        if table_name == 'admin' and 'token' in row_dict:
-            row_dict['token'] = '••••••••'
-        rows.append(row_dict)
-
-    conn.close()
-
-    return {
-        "success"     : True,
-        "table_name"  : table_name,
-        "columns"     : columns,
-        "rows"        : rows,
-        "total_rows"  : total_rows,
-        "page"        : page,
-        "per_page"    : per_page,
-        "total_pages" : total_pages,
-    }
-
-
-def delete_row(table_name, row_id, token):
-    """
-    Delete a single row from any table by ID.
-    Requires admin token for security.
-    """
-    if not verify_token(token):
-        return {"success": False, "message": "Unauthorized"}
-
-    allowed_tables = ['patients', 'readings']
-    if table_name not in allowed_tables:
-        return {
-            "success": False,
-            "message": f"Cannot delete from '{table_name}'"
-        }
-
-    conn = get_connection()
-    cur  = conn.cursor()
-
+    if not conn: return {"success": False, "message": "Connection failed"}
     try:
-        # If deleting patient, also delete their readings
-        if table_name == 'patients':
-            # Get patient_id first
-            cur.execute(
-                "SELECT patient_id FROM patients WHERE id = ?",
-                (row_id,)
-            )
-            patient_row = cur.fetchone()
+        with conn.cursor() as cur:
+            cur.execute(f"DESCRIBE {table_name}")
+            columns = [{"name": r['Field'], "type": r['Type']} for r in cur.fetchall()]
+            cur.execute(f"SELECT COUNT(*) as count FROM {table_name}")
+            row_count = cur.fetchone()['count']
+            return {"success": True, "table_name": table_name, "columns": columns, "row_count": row_count}
+    finally:
+        conn.close()
 
-            if not patient_row:
-                return {
-                    "success": False,
-                    "message": "Row not found"
-                }
-
-            pid = patient_row['patient_id']
-
-            # Delete readings first
-            cur.execute(
-                "DELETE FROM readings WHERE patient_id = ?",
-                (pid,)
-            )
-            readings_deleted = cur.rowcount
-
-            # Delete patient
-            cur.execute(
-                "DELETE FROM patients WHERE id = ?",
-                (row_id,)
-            )
-            conn.commit()
-
-            return {
-                "success"         : True,
-                "message"         : f"Patient {pid} deleted",
-                "readings_deleted": readings_deleted
-            }
-
-        else:
-            # Delete from readings table
-            cur.execute(
-                f"DELETE FROM {table_name} WHERE id = ?",
-                (row_id,)
-            )
-            deleted = cur.rowcount
-            conn.commit()
-
-            if deleted == 0:
-                return {
-                    "success": False,
-                    "message": "Row not found"
-                }
-
-            return {
-                "success": True,
-                "message": f"Row {row_id} deleted from {table_name}"
-            }
-
-    except Exception as e:
-        return {"success": False, "message": str(e)}
-
+def get_table_data(table_name, page=1, per_page=50, search='', sort_by='id', sort_order='DESC'):
+    """Get paginated data from a table"""
+    allowed_tables = ['patients', 'readings', 'admin']
+    if table_name not in allowed_tables: return {"success": False, "message": "Invalid table"}
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Connection failed"}
+    try:
+        with conn.cursor() as cur:
+            # Validate sort column
+            cur.execute(f"DESCRIBE {table_name}")
+            columns = [r['Field'] for r in cur.fetchall()]
+            if sort_by not in columns: sort_by = 'id'
+            sort_order = 'DESC' if sort_order.upper() == 'DESC' else 'ASC'
+            
+            # Simple search logic
+            where_clause = ""
+            params = []
+            if search:
+                search_val = f"%{search}%"
+                search_conds = []
+                for col in columns:
+                    # In MySQL/TiDB, we can search in most columns using LIKE
+                    search_conds.append(f"CAST({col} AS CHAR) LIKE %s")
+                    params.append(search_val)
+                where_clause = "WHERE " + " OR ".join(search_conds)
+            
+            cur.execute(f"SELECT COUNT(*) as count FROM {table_name} {where_clause}", params)
+            total_rows = cur.fetchone()['count']
+            total_pages = max(1, (total_rows + per_page - 1) // per_page)
+            page = max(1, min(page, total_pages))
+            offset = (page - 1) * per_page
+            
+            cur.execute(f"SELECT * FROM {table_name} {where_clause} ORDER BY {sort_by} {sort_order} LIMIT %s OFFSET %s", params + [per_page, offset])
+            rows = cur.fetchall()
+            for r in rows:
+                for k, v in r.items():
+                    if isinstance(v, (datetime.datetime, datetime.date)): r[k] = str(v)
+                    if table_name == 'admin' and k in ['password', 'token']: r[k] = '••••••••'
+            
+            return {"success": True, "table_name": table_name, "columns": columns, "rows": rows, "total_rows": total_rows, "page": page, "per_page": per_page, "total_pages": total_pages}
     finally:
         conn.close()
