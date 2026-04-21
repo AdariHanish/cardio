@@ -214,12 +214,14 @@ def register_patient(name, age, weight, gender, contact='', medical_history=''):
         conn.close()
 
 def search_patient(query):
-    """Search patient by ID or name"""
+    """Search patient by ID, name, contact, or history (fuzzy)"""
     conn = get_connection()
-    if not conn: return None
+    if not conn: return []
     
     try:
         with conn.cursor() as cur:
+            # We search across patient_id, name, contact, and medical_history
+            search_val = f'%{query}%'
             cur.execute('''
                 SELECT p.*,
                        COUNT(r.id)      AS reading_count,
@@ -227,17 +229,21 @@ def search_patient(query):
                 FROM   patients p
                 LEFT JOIN readings r
                        ON p.patient_id = r.patient_id
-                WHERE  p.patient_id = %s
+                WHERE  p.patient_id LIKE %s
                    OR  LOWER(p.name) LIKE LOWER(%s)
+                   OR  p.contact LIKE %s
+                   OR  LOWER(p.medical_history) LIKE LOWER(%s)
                 GROUP  BY p.id
-                LIMIT  1
-            ''', (query.upper(), f'%{query}%'))
-            row = cur.fetchone()
-            if row and row['registered_on']:
-                row['registered_on'] = str(row['registered_on'])
-            if row and row['last_visit']:
-                row['last_visit'] = str(row['last_visit'])
-            return row
+                ORDER  BY p.name ASC
+                LIMIT  10
+            ''', (search_val, search_val, search_val, search_val))
+            rows = cur.fetchall()
+            for row in rows:
+                if row.get('registered_on'):
+                    row['registered_on'] = str(row['registered_on'])
+                if row.get('last_visit'):
+                    row['last_visit'] = str(row['last_visit'])
+            return rows
     finally:
         conn.close()
 

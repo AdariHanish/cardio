@@ -159,26 +159,28 @@ function renderPatientsTable(patients) {
 // FILTER PATIENTS
 // =============================================================
 function filterPatients() {
-    const q = (document.getElementById('adminSearchInput')
-        ?.value || '').toLowerCase();
-    const gender = document.getElementById('genderFilter')
-        ?.value || '';
-    const ageRng = document.getElementById('ageFilter')
-        ?.value || '';
+    const q = (document.getElementById('adminSearchInput')?.value || '').toLowerCase();
+    const gender = document.getElementById('genderFilter')?.value || '';
+    const ageRng = document.getElementById('ageFilter')?.value || '';
 
     const filtered = allPatients.filter(p => {
-        const matchQ = !q ||
-            (p.name || '').toLowerCase().includes(q) ||
-            (p.patient_id || '').toLowerCase().includes(q) ||
-            String(p.age || '').includes(q);
+        // Broad Google-style search across multiple fields
+        const searchPool = [
+            p.name,
+            p.patient_id,
+            p.contact,
+            p.medical_history,
+            String(p.age),
+            p.gender
+        ].map(s => (s || '').toLowerCase()).join(' ');
 
+        const matchQ = !q || searchPool.includes(q);
         const matchG = !gender || p.gender === gender;
 
         let matchA = true;
         if (ageRng) {
             const [mn, mx] = ageRng.split('-').map(Number);
-            matchA = (p.age || 0) >= mn &&
-                (p.age || 0) <= mx;
+            matchA = (p.age || 0) >= mn && (p.age || 0) <= mx;
         }
 
         return matchQ && matchG && matchA;

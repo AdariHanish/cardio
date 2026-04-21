@@ -106,15 +106,15 @@ def search_patient():
         return jsonify({"success": False, "message": "Search query empty"}), 400
         
     try:
-        patient = db.search_patient(q)
-        if not patient:
-            return jsonify({"success": False, "message": "Patient not found"}), 404
+        patients = db.search_patient(q)
+        if not patients:
+            return jsonify({"success": False, "message": "No patients found matching that term."}), 404
             
-        readings = db.get_patient_readings(patient['patient_id'])
+        # We now return the list of matching patients. 
+        # The frontend will decide if it needs to fetch specific readings for a single match.
         return jsonify({
             "success": True,
-            "patient": patient,
-            "readings": readings
+            "patients": patients
         })
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500

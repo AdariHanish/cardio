@@ -220,19 +220,31 @@
     </div>
 
     <!-- Search Card -->
-    <div class="glass-card search-card">
+    <div class="search-card">
       <div id="alertBox"></div>
-      <div class="search-row">
-        <input type="text" class="form-input" id="searchInput"
-               placeholder="Enter Patient ID (e.g. 34213) or Name"
-               onkeydown="if(event.key==='Enter') searchPatient()">
-        <button class="btn btn-primary" onclick="searchPatient()">
-          🔍 Search
-        </button>
-      </div>
-      <div style="margin-top:12px;font-size:12px;color:var(--text-muted);
-                  text-align:center">
-        Search by ID • Name • Age (shows age group)
+      <div class="glass-card" style="padding:24px; position:relative; z-index:1001">
+        <div class="search-row">
+          <div style="position:relative; flex:1">
+            <input type="text" class="form-input" id="searchInput"
+                   placeholder="Start typing Name or ID..."
+                   autocomplete="off"
+                   oninput="handleSearchInput(this.value)">
+            <!-- Search Results Dropdown -->
+            <div id="searchResultsDropdown" class="glass-card" 
+                 style="display:none; position:absolute; top:100%; left:0; right:0; 
+                        margin-top:10px; max-height:300px; overflow-y:auto; 
+                        z-index:1002; padding:10px; border-color:var(--cyan);
+                        box-shadow:0 10px 30px rgba(0,0,0,0.5)">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="triggerSearch()">
+            🔍 Search
+          </button>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-muted);
+                    text-align:center">
+          Searching across Name • ID • Contact • History in real-time
+        </div>
       </div>
     </div>
 
@@ -302,14 +314,86 @@
 <script src="js/app.js"></script>
 <script src="js/patients.js"></script>
 <script>
-  async function searchPatient() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (!query) {
-      showAlert('alertBox', 'error', 'Please enter a search term.');
+  let searchDebounce = null;
+
+  async function handleSearchInput(val) {
+    const dropdown = document.getElementById('searchResultsDropdown');
+    
+    if (searchDebounce) clearTimeout(searchDebounce);
+    
+    if (!val || val.length < 2) {
+      dropdown.style.display = 'none';
       return;
     }
 
-    // Check if pure number → age search
+    searchDebounce = setTimeout(async () => {
+      try {
+        const data = await api.get(`/api/patients/search?q=${encodeURIComponent(val)}`);
+        if (data.success && data.patients && data.patients.length > 0) {
+          renderSearchResults(data.patients);
+        } else {
+          dropdown.style.display = 'none';
+        }
+      } catch (e) {
+        console.error("Search failed", e);
+      }
+    }, 300);
+  }
+
+  function renderSearchResults(patients) {
+    const dropdown = document.getElementById('searchResultsDropdown');
+    dropdown.style.display = 'block';
+    
+    if (patients.length === 0) {
+      dropdown.innerHTML = `
+        <div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px">
+          No patients found matching "${document.getElementById('searchInput').value}"
+        </div>`;
+      return;
+    }
+
+    dropdown.innerHTML = patients.map(p => `
+      <div class="search-result-item" 
+           style="padding:12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05);
+                  transition:background 0.2s"
+           onmouseover="this.style.background='rgba(0,229,255,0.1)'"
+           onmouseout="this.style.background='transparent'"
+           onclick="selectPatient('${p.patient_id}')">
+        <div style="font-weight:700; color:var(--cyan); display:flex; justify-content:space-between">
+          <span>${p.name}</span>
+          <span style="font-size:11px; opacity:0.6">ID: ${p.patient_id}</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px">
+          ${p.gender} · ${p.age} yrs · ${p.contact || 'No contact'}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function selectPatient(pid) {
+    document.getElementById('searchResultsDropdown').style.display = 'none';
+    document.getElementById('searchInput').value = pid;
+    
+    try {
+      // For specific patient deep dive
+      const data = await api.get(`/api/admin/readings?patient_id=${pid}`);
+      // Find full patient details from allPatients or another call
+      const patientsData = await api.get(`/api/patients/search?q=${pid}`);
+      const patient = patientsData.patients.find(p => p.patient_id === pid);
+      
+      if (patient) {
+        displayPatient(patient, data.readings || []);
+      }
+    } catch (e) {
+      showAlert('alertBox', 'error', 'Failed to load health history.');
+    }
+  }
+
+  async function triggerSearch() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    
+    // Fallback for age search
     if (/^\d+$/.test(query) && parseInt(query) <= 120) {
       await searchByAge(parseInt(query));
       return;
@@ -317,15 +401,13 @@
 
     try {
       const data = await api.get(`/api/patients/search?q=${encodeURIComponent(query)}`);
-
-      if (!data.success || !data.patient) {
-        showAlert('alertBox', 'error', 'Patient not found. Check the ID or name.');
-        document.getElementById('resultsArea').style.display = 'none';
-        return;
+      if (data.success && data.patients && data.patients.length === 1) {
+        selectPatient(data.patients[0].patient_id);
+      } else if (data.success && data.patients && data.patients.length > 1) {
+        renderSearchResults(data.patients);
+      } else {
+        showAlert('alertBox', 'error', 'No patients found.');
       }
-
-      displayPatient(data.patient, data.readings || []);
-
     } catch(e) {
       showAlert('alertBox', 'error', 'Cannot connect to database.');
     }
