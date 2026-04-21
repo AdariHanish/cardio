@@ -13,10 +13,12 @@
 // CardioCare AI — Global Utilities
 // =============================================================
 
-// API Base URL (points to Raspberry Pi Flask server)
-const API_BASE = window.location.hostname === 'localhost'
+// API Base URL
+// - On local dev (localhost/127.0.0.1): Use port 5000
+// - On Production (Vercel): Use relative paths ('')
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://localhost:5000'
-  : `http://${window.location.hostname}:5000`;
+  : '';
 
 // Block non-numeric characters in input fields
 function blockNonNumeric(event, allowDecimal = false) {
