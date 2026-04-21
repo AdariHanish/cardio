@@ -1,6 +1,6 @@
-// =============================================================
-// CardioCare AI — Admin Dashboard
-// js/admin.js — Complete Final Version
+﻿// =============================================================
+// CardioCare AI â€” Admin Dashboard
+// js/admin.js â€” Complete Final Version
 // =============================================================
 
 // =============================================================
@@ -75,7 +75,7 @@ async function loadPatients() {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="9" style="text-align:center; color:var(--red); padding:30px">
-                        ❌ ${data.message || 'Failed to load patients'}
+                        âŒ ${data.message || 'Failed to load patients'}
                     </td>
                 </tr>`;
         }
@@ -95,7 +95,7 @@ function renderPatientsTable(patients) {
                 <td colspan="9" style="text-align:center;
                     color:var(--text-muted);padding:40px">
                     <div style="font-size:40px;
-                                margin-bottom:12px">👥</div>
+                                margin-bottom:12px">ðŸ‘¥</div>
                     No patients registered yet.
                 </td>
             </tr>`;
@@ -106,14 +106,14 @@ function renderPatientsTable(patients) {
         <tr style="cursor:pointer"
             onclick="openPatientModal('${p.patient_id}')">
             <td class="text-cyan" style="font-weight:700">
-                ${p.patient_id || '—'}
+                ${p.patient_id || 'â€”'}
             </td>
             <td style="font-weight:600">
-                ${p.name || '—'}
+                ${p.name || 'â€”'}
             </td>
-            <td>${p.age || '—'} yrs</td>
-            <td>${p.gender || '—'}</td>
-            <td>${p.weight || '—'} kg</td>
+            <td>${p.age || 'â€”'} yrs</td>
+            <td>${p.gender || 'â€”'}</td>
+            <td>${p.weight || 'â€”'} kg</td>
             <td>
                 <span class="badge badge-online"
                       style="font-size:11px">
@@ -133,7 +133,7 @@ function renderPatientsTable(patients) {
                             '${p.patient_id}'
                         )"
                         title="View patient details">
-                        👁 View
+                        ðŸ‘ View
                     </button>
                     <button
                         class="btn btn-sm"
@@ -147,7 +147,7 @@ function renderPatientsTable(patients) {
                             ${p.reading_count || 0}
                         )"
                         title="Delete patient permanently">
-                        🗑 Delete
+                        ðŸ—‘ Delete
                     </button>
                 </div>
             </td>
@@ -208,26 +208,26 @@ async function openPatientModal(patientId) {
 
     // Avatar
     setEl('modalAvatar',
-        patient.gender === 'Female' ? '👩' : '👨'
+        patient.gender === 'Female' ? 'ðŸ‘©' : 'ðŸ‘¨'
     );
-    setEl('modalName', patient.name || '—');
+    setEl('modalName', patient.name || 'â€”');
     setEl('modalMeta',
-        `${patient.patient_id} • ` +
-        `${patient.age} years • ` +
+        `${patient.patient_id} â€¢ ` +
+        `${patient.age} years â€¢ ` +
         `${patient.gender}`
     );
 
     // Details grid
     const details = [
-        ['🆔 Patient ID', patient.patient_id],
-        ['👤 Full Name', patient.name],
-        ['🎂 Age', `${patient.age} years`],
-        ['⚖️ Weight', `${patient.weight} kg`],
-        ['⚤ Gender', patient.gender],
-        ['📋 Readings', patient.reading_count || 0],
-        ['📅 Registered',
+        ['ðŸ†” Patient ID', patient.patient_id],
+        ['ðŸ‘¤ Full Name', patient.name],
+        ['ðŸŽ‚ Age', `${patient.age} years`],
+        ['âš–ï¸ Weight', `${patient.weight} kg`],
+        ['âš¤ Gender', patient.gender],
+        ['ðŸ“‹ Readings', patient.reading_count || 0],
+        ['ðŸ“… Registered',
             formatTimestamp(patient.registered_on)],
-        ['🏥 History',
+        ['ðŸ¥ History',
             patient.medical_history || 'None recorded'],
     ];
 
@@ -244,7 +244,7 @@ async function openPatientModal(patientId) {
                              margin-bottom:4px">${k}</div>
                 <div style="font-size:14px;
                              font-weight:500">
-                    ${v || '—'}
+                    ${v || 'â€”'}
                 </div>
             </div>
         `).join('');
@@ -291,7 +291,7 @@ async function loadPatientHistoryInModal() {
     if (!data.success) {
         accordion.innerHTML = `
             <div style="color:var(--red); text-align:center; padding:20px">
-                ❌ ${data.message || 'Failed to load history'}
+                âŒ ${data.message || 'Failed to load history'}
             </div>`;
         return;
     }
@@ -299,7 +299,7 @@ async function loadPatientHistoryInModal() {
     if (readings.length === 0) {
         accordion.innerHTML = `
             <div style="text-align:center;padding:40px; color:var(--text-muted)">
-                <div style="font-size:36px; margin-bottom:12px">📭</div>
+                <div style="font-size:36px; margin-bottom:12px">ðŸ“­</div>
                 No readings recorded yet for this patient.
             </div>`;
         return;
@@ -327,32 +327,32 @@ async function loadPatientHistoryInModal() {
                         Max: ${maxR.toFixed(0)}%
                     </span>
                     <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 10px; font-size:11px"
-                        onclick="event.stopPropagation(); confirmDeleteReading(${r.id}, ${i + 1})" title="Delete this reading">🗑</button>
-                    <span style="color:var(--text-muted)">▼</span>
+                        onclick="event.stopPropagation(); confirmDeleteReading(${r.id}, ${i + 1})" title="Delete this reading">ðŸ—‘</button>
+                    <span style="color:var(--text-muted)">â–¼</span>
                 </div>
             </div>
             <div class="accordion-body">
                 <div class="risk-grid-mini">
-                    ${buildMiniRisk('🔴 Arrhythmia', r.arrhythmia_risk || 0)}
-                    ${buildMiniRisk('❤️ Heart Attack', r.heartattack_risk || 0)}
-                    ${buildMiniRisk('🧠 Stroke Risk', r.stroke_risk || 0)}
-                    ${buildMiniRisk('💊 Hypertension', r.hypertension_risk || 0)}
+                    ${buildMiniRisk('ðŸ”´ Arrhythmia', r.arrhythmia_risk || 0)}
+                    ${buildMiniRisk('â¤ï¸ Heart Attack', r.heartattack_risk || 0)}
+                    ${buildMiniRisk('ðŸ§  Stroke Risk', r.stroke_risk || 0)}
+                    ${buildMiniRisk('ðŸ’Š Hypertension', r.hypertension_risk || 0)}
                 </div>
                 <div style="display:flex;gap:20px; font-size:13px; color:var(--text-secondary); flex-wrap:wrap; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); margin-top:10px">
-                    <span>❤️ HR: ${r.heart_rate || '--'} bpm</span>
-                    <span>🫁 SpO2: ${r.spo2 || '--'}%</span>
-                    <span>🩸 BP: ${r.sbp || '--'}/${r.dbp || '--'} mmHg</span>
-                    <span>⏱ PTT: ${r.ptt_ms || '--'} ms</span>
+                    <span>â¤ï¸ HR: ${r.heart_rate || '--'} bpm</span>
+                    <span>ðŸ« SpO2: ${r.spo2 || '--'}%</span>
+                    <span>ðŸ©¸ BP: ${r.sbp || '--'}/${r.dbp || '--'} mmHg</span>
+                    <span>â± PTT: ${r.ptt_ms || '--'} ms</span>
                 </div>
-                ${r.future_risk ? `<div style="margin-top:12px; padding:10px 14px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.15); border-radius:8px; font-size:13px; color:var(--text-secondary)">🔮 <strong>Future Prediction:</strong> ${r.future_risk}</div>` : ''}
-                ${r.overall_condition ? `<div style="margin-top:10px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; ${getConditionStyle(r.overall_condition)}">📋 ${r.overall_condition}</div>` : ''}
+                ${r.future_risk ? `<div style="margin-top:12px; padding:10px 14px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.15); border-radius:8px; font-size:13px; color:var(--text-secondary)">ðŸ”® <strong>Future Prediction:</strong> ${r.future_risk}</div>` : ''}
+                ${r.overall_condition ? `<div style="margin-top:10px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; ${getConditionStyle(r.overall_condition)}">ðŸ“‹ ${r.overall_condition}</div>` : ''}
             </div>
         </div>`;
     }).join('');
 }
 
 // =============================================================
-// DELETE PATIENT — Confirmation
+// DELETE PATIENT â€” Confirmation
 // =============================================================
 function confirmDeletePatient(patientId, patientName,
     readingCount) {
@@ -360,7 +360,7 @@ function confirmDeletePatient(patientId, patientName,
         <div style="text-align:center;padding:10px">
 
             <div style="font-size:60px;margin-bottom:16px">
-                ⚠️
+                âš ï¸
             </div>
 
             <h2 style="color:var(--red);
@@ -418,7 +418,7 @@ function confirmDeletePatient(patientId, patientName,
                          margin-bottom:24px;
                          font-size:13px;
                          color:var(--orange)">
-                ⚠️ This action is
+                âš ï¸ This action is
                 <strong>permanent</strong>
                 and cannot be undone.
                 All health readings will also be deleted.
@@ -428,7 +428,7 @@ function confirmDeletePatient(patientId, patientName,
                 <button class="btn btn-outline"
                         style="flex:1"
                         onclick="closeDeleteModal()">
-                    ✕ Cancel
+                    âœ• Cancel
                 </button>
                 <button
                     class="btn"
@@ -441,7 +441,7 @@ function confirmDeletePatient(patientId, patientName,
                     onclick="executeDeletePatient(
                         '${patientId}'
                     )">
-                    🗑 Yes, Delete Permanently
+                    ðŸ—‘ Yes, Delete Permanently
                 </button>
             </div>
         </div>
@@ -451,7 +451,7 @@ function confirmDeletePatient(patientId, patientName,
 }
 
 // =============================================================
-// DELETE PATIENT — Execute
+// DELETE PATIENT â€” Execute
 // =============================================================
 async function executeDeletePatient(patientId) {
     const modalBox = document.querySelector('#deleteModal .modal-box');
@@ -472,14 +472,14 @@ async function executeDeletePatient(patientId) {
 }
 
 // =============================================================
-// DELETE SINGLE READING — Confirmation
+// DELETE SINGLE READING â€” Confirmation
 // =============================================================
 function confirmDeleteReading(readingId, readingNumber) {
     const html = `
         <div style="text-align:center;padding:10px">
 
             <div style="font-size:50px;margin-bottom:16px">
-                🗑️
+                ðŸ—‘ï¸
             </div>
 
             <h3 style="color:var(--red);margin-bottom:12px">
@@ -500,7 +500,7 @@ function confirmDeleteReading(readingId, readingNumber) {
                 <button class="btn btn-outline"
                         style="flex:1"
                         onclick="closeDeleteModal()">
-                    ✕ Cancel
+                    âœ• Cancel
                 </button>
                 <button
                     class="btn"
@@ -511,7 +511,7 @@ function confirmDeleteReading(readingId, readingNumber) {
                     onclick="executeDeleteReading(
                         ${readingId}
                     )">
-                    🗑 Delete Reading
+                    ðŸ—‘ Delete Reading
                 </button>
             </div>
         </div>
@@ -521,7 +521,7 @@ function confirmDeleteReading(readingId, readingNumber) {
 }
 
 // =============================================================
-// DELETE READING — Execute
+// DELETE READING â€” Execute
 // =============================================================
 async function executeDeleteReading(readingId) {
     const modalBox = document.querySelector('#deleteModal .modal-box');
@@ -554,14 +554,14 @@ async function loadDbTables() {
     const data = await api.get('/api/admin/db/tables');
 
     if (!data.success) {
-        container.innerHTML = `<div class="alert alert-error">❌ ${data.message || 'Failed to load tables'}</div>`;
+        container.innerHTML = `<div class="alert alert-error">âŒ ${data.message || 'Failed to load tables'}</div>`;
         return;
     }
 
     let html = `<div style="display:grid;gap:16px; margin-bottom:24px">`;
     data.tables.forEach(table => {
         const colList = table.columns.map(c => c.name).join(', ');
-        const icon = table.table_name === 'patients' ? '👥' : table.table_name === 'readings' ? '📊' : table.table_name === 'admin' ? '🛡️' : '📋';
+        const icon = table.table_name === 'patients' ? 'ðŸ‘¥' : table.table_name === 'readings' ? 'ðŸ“Š' : table.table_name === 'admin' ? 'ðŸ›¡ï¸' : 'ðŸ“‹';
         const isActive = table.table_name === currentTableName;
 
         html += `
@@ -578,7 +578,7 @@ async function loadDbTables() {
                 <span class="badge badge-online" style="font-size:12px">${table.row_count} rows</span>
             </div>
             <div style="font-size:12px; color:var(--text-secondary); line-height:1.8; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:10px">${colList}</div>
-            <div style="text-align:center; font-size:12px; color:var(--cyan)">Click to view data →</div>
+            <div style="text-align:center; font-size:12px; color:var(--cyan)">Click to view data â†’</div>
         </div>`;
     });
 
@@ -613,7 +613,7 @@ async function loadTableData(tableName, page) {
     const data = await api.get(`/api/admin/db/tables/${tableName}?${params}`);
 
     if (!data.success) {
-        viewer.innerHTML = `<div class="alert alert-error">❌ ${data.message || 'Failed to load data'}</div>`;
+        viewer.innerHTML = `<div class="alert alert-error">âŒ ${data.message || 'Failed to load data'}</div>`;
         return;
     }
 
@@ -632,7 +632,7 @@ function renderTableData(data, viewer) {
 
     const isProtected = table_name === 'admin';
 
-    // ── Header ────────────────────────────────────────────────
+    // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let html = `
     <div style="background:var(--bg-card);
                  backdrop-filter:blur(20px);
@@ -655,8 +655,8 @@ function renderTableData(data, viewer) {
                              display:flex;
                              align-items:center;
                              gap:8px">
-                    ${table_name === 'patients' ? '👥' :
-            table_name === 'readings' ? '📊' : '🛡️'}
+                    ${table_name === 'patients' ? 'ðŸ‘¥' :
+            table_name === 'readings' ? 'ðŸ“Š' : 'ðŸ›¡ï¸'}
                     ${table_name}
                     <span class="badge badge-online"
                           style="font-size:11px">
@@ -667,7 +667,7 @@ function renderTableData(data, viewer) {
                              color:var(--text-muted);
                              margin-top:4px">
                     Page ${page} of ${total_pages}
-                    · Showing ${rows.length} of ${total_rows} rows
+                    Â· Showing ${rows.length} of ${total_rows} rows
                 </div>
             </div>
 
@@ -681,22 +681,22 @@ function renderTableData(data, viewer) {
                        style="width:220px;
                                padding:10px 14px;
                                font-size:13px"
-                       placeholder="🔍 Search ${table_name}..."
+                       placeholder="ðŸ” Search ${table_name}..."
                        value="${escStr(currentSearch)}"
                        oninput="debounceTableSearch(
                            this.value, '${table_name}'
                        )">
                 <button class="btn btn-outline btn-sm"
                         onclick="closeTableViewer()">
-                    ✕ Close
+                    âœ• Close
                 </button>
             </div>
         </div>
 
         <!-- DATA TABLE -->
-        <div style="overflow-x:auto;
+        <div style="table-responsive;
                      max-height:550px;
-                     overflow-y:auto">
+                     ">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -706,7 +706,7 @@ function renderTableData(data, viewer) {
     columns.forEach(col => {
         const isSorted = col === currentSortBy;
         const arrow = isSorted
-            ? (currentSortOrder === 'ASC' ? ' ↑' : ' ↓')
+            ? (currentSortOrder === 'ASC' ? ' â†‘' : ' â†“')
             : '';
         const nextOrder = (isSorted &&
             currentSortOrder === 'DESC')
@@ -740,7 +740,7 @@ function renderTableData(data, viewer) {
                 <tbody>
     `;
 
-    // ── Rows ──────────────────────────────────────────────────
+    // â”€â”€ Rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (rows.length === 0) {
         const colspan = columns.length + (isProtected ? 0 : 1);
         html += `
@@ -750,7 +750,7 @@ function renderTableData(data, viewer) {
                             padding:40px;
                             color:var(--text-muted)">
                     <div style="font-size:30px;
-                                 margin-bottom:10px">📭</div>
+                                 margin-bottom:10px">ðŸ“­</div>
                     ${currentSearch
                 ? `No results for "${currentSearch}"`
                 : 'Table is empty'}
@@ -785,7 +785,7 @@ function renderTableData(data, viewer) {
                         'white-space:nowrap';
                 } else if (col === 'password' ||
                     col === 'token') {
-                    display = '••••••••';
+                    display = 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
                     style = 'color:var(--text-muted);' +
                         'letter-spacing:2px';
                 } else if (typeof val === 'string' &&
@@ -813,7 +813,7 @@ function renderTableData(data, viewer) {
                             style="padding:5px 10px; font-size:12px"
                             onclick="showRowDetail('${table_name}', ${row.id})"
                             title="View full details">
-                            👁
+                            ðŸ‘
                         </button>`;
 
             if (!isProtected) {
@@ -843,7 +843,7 @@ function renderTableData(data, viewer) {
                                 '${rowType}'
                             )"
                             title="Delete row ${row.id}">
-                            🗑
+                            ðŸ—‘
                         </button>`;
             }
             html += `</div></td>`;
@@ -857,7 +857,7 @@ function renderTableData(data, viewer) {
         </div>
     `;
 
-    // ── Pagination ────────────────────────────────────────────
+    // â”€â”€ Pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (total_pages > 1) {
         html += `
             <div style="display:flex;
@@ -874,7 +874,7 @@ function renderTableData(data, viewer) {
                         onclick="loadTableData(
                             '${table_name}', ${page - 1}
                         )">
-                    ← Prev
+                    â† Prev
                 </button>`;
         }
 
@@ -909,7 +909,7 @@ function renderTableData(data, viewer) {
                         onclick="loadTableData(
                             '${table_name}', ${page + 1}
                         )">
-                    Next →
+                    Next â†’
                 </button>`;
         }
 
@@ -975,7 +975,7 @@ function confirmDeleteRow(tableName, rowId,
         <div style="text-align:center;padding:10px">
 
             <div style="font-size:50px;margin-bottom:16px">
-                🗑️
+                ðŸ—‘ï¸
             </div>
 
             <h3 style="color:var(--red);margin-bottom:12px">
@@ -1024,7 +1024,7 @@ function confirmDeleteRow(tableName, rowId,
                          margin-bottom:20px;
                          font-size:13px;
                          color:var(--orange)">
-                ⚠️ Deleting a patient will also permanently
+                âš ï¸ Deleting a patient will also permanently
                 delete <strong>ALL their readings</strong>
             </div>` : ''}
 
@@ -1032,7 +1032,7 @@ function confirmDeleteRow(tableName, rowId,
                 <button class="btn btn-outline"
                         style="flex:1"
                         onclick="closeDeleteModal()">
-                    ✕ Cancel
+                    âœ• Cancel
                 </button>
                 <button
                     class="btn"
@@ -1043,7 +1043,7 @@ function confirmDeleteRow(tableName, rowId,
                     onclick="executeDeleteRow(
                         '${tableName}', ${rowId}
                     )">
-                    🗑 Delete
+                    ðŸ—‘ Delete
                 </button>
             </div>
         </div>
@@ -1157,14 +1157,14 @@ async function loadAllReadings() {
                 </td>
                 <td>
                     <button class="btn btn-primary btn-sm" onclick="viewPatientHistoryFromReadings('${p.patient_id}')">
-                        📋 View Readings
+                        ðŸ“‹ View Readings
                     </button>
                 </td>
             </tr>
         `).join('');
 
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--red); padding:20px">❌ Failed to load patient list</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--red); padding:20px">âŒ Failed to load patient list</td></tr>`;
     }
 }
 
@@ -1205,14 +1205,14 @@ async function updateCredentials() {
         });
 
         if (data.success) {
-            alert('✅ Credentials updated successfully!\nPlease log in again with new credentials.');
+            alert('âœ… Credentials updated successfully!\nPlease log in again with new credentials.');
             adminLogout();
         } else {
-            alert(`❌ Failed to update credentials: ${data.message || 'Unknown error'}`);
+            alert(`âŒ Failed to update credentials: ${data.message || 'Unknown error'}`);
         }
 
     } catch (e) {
-        alert('❌ Connection error. Try again.');
+        alert('âŒ Connection error. Try again.');
     }
 }
 
@@ -1238,16 +1238,16 @@ async function submitAddAdmin() {
         });
 
         if (data.success) {
-            alert(`✅ Admin "${name}" created successfully!`);
+            alert(`âœ… Admin "${name}" created successfully!`);
             document.getElementById('addAdminName').value = '';
             document.getElementById('addAdminPass').value = '';
             document.getElementById('addAdminConfirm').value = '';
             loadDbTables(); // Refresh table counts
         } else {
-            alert(`❌ Failed: ${data.message}`);
+            alert(`âŒ Failed: ${data.message}`);
         }
     } catch (e) {
-        alert('❌ Connection error adding admin.');
+        alert('âŒ Connection error adding admin.');
     }
 }
 
@@ -1301,7 +1301,7 @@ function showModalSuccess(box, title, message) {
     box.innerHTML = `
         <div style="text-align:center;padding:40px">
             <div style="font-size:56px;
-                         margin-bottom:16px">✅</div>
+                         margin-bottom:16px">âœ…</div>
             <h3 style="color:var(--green);
                         margin-bottom:10px">
                 ${title}
@@ -1319,7 +1319,7 @@ function showModalError(box, message) {
     box.innerHTML = `
         <div style="text-align:center;padding:40px">
             <div style="font-size:56px;
-                         margin-bottom:16px">❌</div>
+                         margin-bottom:16px">âŒ</div>
             <h3 style="color:var(--red);
                         margin-bottom:10px">
                 Failed
@@ -1433,7 +1433,7 @@ function showRowDetail(tableName, rowId) {
     const content = document.getElementById('rowDetailContent');
     const title = document.getElementById('rowDetailTitle');
     
-    title.textContent = `📋 Record: ${tableName} #${rowId}`;
+    title.textContent = `ðŸ“‹ Record: ${tableName} #${rowId}`;
     
     let html = '';
     for (const [key, val] of Object.entries(row)) {

@@ -1,12 +1,12 @@
-/* ============================================================
-   CardioCare AI — Global Stylesheet
+﻿/* ============================================================
+   CardioCare AI â€” Global Stylesheet
    Dark Glassmorphism Medical Dashboard
    ============================================================ */
 
-/* ── Google Fonts ── */
+/* â”€â”€ Google Fonts â”€â”€ */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ── CSS Variables ── */
+/* â”€â”€ CSS Variables â”€â”€ */
 :root {
   --bg-primary    : #020818;
   --bg-secondary  : #050d2a;
@@ -30,7 +30,7 @@
   --transition    : all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Reset ── */
+/* â”€â”€ Reset â”€â”€ */
 *, *::before, *::after {
   margin     : 0;
   padding    : 0;
@@ -48,7 +48,7 @@ body {
   position         : relative;
 }
 
-/* ── Animated Background ── */
+/* â”€â”€ Animated Background â”€â”€ */
 body::before {
   content  : '';
   position : fixed;
@@ -91,14 +91,14 @@ body::after {
   100% { transform: translateY(0px); }
 }
 
-/* ── Page Wrapper ── */
+/* â”€â”€ Page Wrapper â”€â”€ */
 .page-wrapper {
   position   : relative;
   z-index    : 1;
   min-height : 100vh;
 }
 
-/* ── Navbar ── */
+/* â”€â”€ Navbar â”€â”€ */
 .navbar {
   position         : fixed;
   top              : 0; left : 0; right : 0;
@@ -185,7 +185,7 @@ body::after {
   border-radius : 2px;
 }
 
-/* ── Lucid Icons ── */
+/* â”€â”€ Lucid Icons â”€â”€ */
 .lucid-icon {
   width      : 100%;
   height     : 100%;
@@ -200,7 +200,7 @@ body::after {
   transform : scale(1.1);
 }
 
-/* ── Lucid SVG Icons ── */
+/* â”€â”€ Lucid SVG Icons â”€â”€ */
 .lucid-svg {
   width          : 20px;
   height         : 20px;
@@ -246,7 +246,7 @@ body::after {
   box-shadow : 0 0 20px var(--cyan-glow) !important;
 }
 
-/* ── Main Content ── */
+/* â”€â”€ Main Content â”€â”€ */
 .main-content {
   padding-top : 92px;
   padding-bottom : 60px;
@@ -256,7 +256,7 @@ body::after {
   margin         : 0 auto;
 }
 
-/* ── Glass Card ── */
+/* â”€â”€ Glass Card â”€â”€ */
 .glass-card {
   background    : var(--bg-card);
   backdrop-filter : blur(20px);
@@ -287,7 +287,7 @@ body::after {
   transform    : translateY(-2px);
 }
 
-/* ── Buttons ── */
+/* â”€â”€ Buttons â”€â”€ */
 .btn {
   display         : inline-flex;
   align-items     : center;
@@ -352,7 +352,7 @@ body::after {
   display : flex;
 }
 
-/* ── Form Elements ── */
+/* â”€â”€ Form Elements â”€â”€ */
 .form-group {
   margin-bottom : 24px;
 }
@@ -410,7 +410,7 @@ select.form-input {
   gap     : 20px;
 }
 
-/* ── Status Badges ── */
+/* â”€â”€ Status Badges â”€â”€ */
 .badge {
   display       : inline-flex;
   align-items   : center;
@@ -439,7 +439,7 @@ select.form-input {
   border     : 1px solid rgba(255,152,0,0.3);
 }
 
-/* ── Progress Bar ── */
+/* â”€â”€ Progress Bar â”€â”€ */
 .progress-bar-container {
   width         : 100%;
   height        : 8px;
@@ -474,7 +474,7 @@ select.form-input {
 .progress-high     { background: linear-gradient(90deg, #e64a19, #ff5722); }
 .progress-critical { background: linear-gradient(90deg, #b71c1c, #ff1744); }
 
-/* ── Section Title ── */
+/* â”€â”€ Section Title â”€â”€ */
 .section-title {
   font-family   : 'Orbitron', sans-serif;
   font-size     : 22px;
@@ -493,7 +493,7 @@ select.form-input {
   line-height   : 1.6;
 }
 
-/* ── Alert Box ── */
+/* â”€â”€ Alert Box â”€â”€ */
 .alert {
   padding       : 16px 20px;
   border-radius : 12px;
@@ -522,7 +522,7 @@ select.form-input {
   color      : var(--cyan);
 }
 
-/* ── Table ── */
+/* â”€â”€ Table â”€â”€ */
 .data-table {
   width           : 100%;
   border-collapse : collapse;
@@ -550,7 +550,7 @@ select.form-input {
   background : rgba(0,229,255,0.04);
 }
 
-/* ── Divider ── */
+/* â”€â”€ Divider â”€â”€ */
 .divider {
   height     : 1px;
   background : linear-gradient(90deg,
@@ -561,7 +561,7 @@ select.form-input {
   margin : 28px 0;
 }
 
-/* ── Loading Spinner ── */
+/* â”€â”€ Loading Spinner â”€â”€ */
 .spinner {
   width         : 40px;
   height        : 40px;
@@ -576,7 +576,7 @@ select.form-input {
   to { transform: rotate(360deg); }
 }
 
-/* ── Scrollbar ── */
+/* â”€â”€ Scrollbar â”€â”€ */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb {
@@ -584,7 +584,7 @@ select.form-input {
   border-radius : 3px;
 }
 
-/* ── Utility ── */
+/* â”€â”€ Utility â”€â”€ */
 .text-cyan    { color: var(--cyan); }
 .text-green   { color: var(--green); }
 .text-red     { color: var(--red); }
@@ -612,7 +612,7 @@ select.form-input {
 .gap-2 { gap: 16px; }
 .w-100 { width: 100%; }
 
-/* ── Floating Animation ── */
+/* â”€â”€ Floating Animation â”€â”€ */
 .float-anim {
   animation: floatCard 6s ease-in-out infinite;
 }
@@ -622,7 +622,7 @@ select.form-input {
   50%       { transform: translateY(-8px); }
 }
 
-/* ── Pulse Dot ── */
+/* â”€â”€ Pulse Dot â”€â”€ */
 .pulse-dot {
   width         : 10px;
   height        : 10px;
@@ -661,11 +661,64 @@ select.form-input {
   0%   { transform: scale(0.8); opacity: 1; }
   100% { transform: scale(2.0); opacity: 0; }
 }
+/* ── Responsive Refinements ── */
 
-/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .main-content { padding-left: 30px; padding-right: 30px; }
+  .admin-grid { grid-template-columns: 240px 1fr; }
+}
+
+@media (max-width: 1024px) {
+  .admin-grid { grid-template-columns: 1fr; }
+  .admin-sidebar { 
+    position: relative; 
+    top: 0; 
+    margin-bottom: 24px; 
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 15px;
+  }
+  .sidebar-menu { display: flex; gap: 10px; width: 100%; white-space: nowrap; }
+  .sidebar-menu li { margin-bottom: 0; }
+  .db-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 768px) {
   .navbar { padding: 0 20px; }
-  .main-content { padding: 80px 20px 40px; }
+  .main-content { padding: 90px 15px 40px; }
   .form-row { grid-template-columns: 1fr; }
   .brand-text { font-size: 16px; }
+  
+  .glass-card { padding: 24px; }
+  .modal-box { padding: 24px; width: 95%; max-height: 90vh; }
+  
+  .db-stats { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .navbar-menu { display: none; }
+  .brand-icon { width: 32px; height: 32px; font-size: 16px; }
+  .section-title { font-size: 18px; }
+  .btn { padding: 12px 20px; font-size: 14px; }
+  .data-table td, .data-table th { padding: 12px 10px; font-size: 13px; }
+}
+
+/* ── Responsive Table Helper ── */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 600px) {
+  .modal-grid { grid-template-columns: 1fr; }
 }
