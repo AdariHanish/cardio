@@ -110,6 +110,51 @@ def init_database():
     print(f"[DB] Database ready       : {DB_PATH}")
     print(f"[DB] Admin user from .env : {admin_user}")
 
+    # ── Seed Sample Data if empty ─────────────────────────────
+    seed_sample_data()
+
+def seed_sample_data():
+    """Populate with sample data if the patients table is empty"""
+    conn = get_connection()
+    cur  = conn.cursor()
+
+    cur.execute("SELECT COUNT(*) FROM patients")
+    if cur.fetchone()[0] > 0:
+        conn.close()
+        return
+
+    print("[DB] 🧬 Seeding database with sample data...")
+
+    samples = [
+        ('58806', 'Adari Hanish', 21, 72.5, 'Male',   '9876543210', 'None'),
+        ('10234', 'Sarah Miller', 45, 64.0, 'Female', '9988776655', 'Hypertension'),
+        ('44219', 'Robert Chen',  62, 81.0, 'Male',   '8877665544', 'Type 2 Diabetes')
+    ]
+
+    for pid, name, age, weight, gender, contact, history in samples:
+        registered = (datetime.datetime.now() - datetime.timedelta(days=7)).isoformat()
+        cur.execute('''
+            INSERT INTO patients (patient_id, name, age, weight, gender, contact, medical_history, registered_on)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (pid, name, age, weight, gender, contact, history, registered))
+
+        # Add 2-3 sample readings for each patient
+        for i in range(random.randint(2, 4)):
+            ts = (datetime.datetime.now() - datetime.timedelta(days=i, hours=random.randint(1, 12))).isoformat()
+            hr = random.randint(65, 85)
+            sp = random.randint(95, 99)
+            risk = random.uniform(5, 35) if i > 0 else random.uniform(30, 75)
+            
+            cur.execute('''
+                INSERT INTO readings (patient_id, timestamp, heart_rate, spo2, sbp, dbp, 
+                                     arrhythmia_risk, heartattack_risk, stroke_risk, hypertension_risk)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (pid, ts, hr, sp, 120 + i, 80 + i, risk, risk*0.8, risk*0.5, risk+5))
+
+    conn.commit()
+    conn.close()
+    print("[DB] ✅ Seeding complete")
+
 # =============================================================
 # PATIENT FUNCTIONS
 # =============================================================
