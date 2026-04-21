@@ -374,58 +374,84 @@
           </div>
         </div>
 
-        <!-- READINGS SECTION (hidden by default) -->
-        <div id="section-readings" class="glass-card"
-             style="display:none">
-          <div class="section-title mb-3">📊 All Readings</div>
+        <!-- READINGS SECTION (Patients List for Readings) -->
+        <div id="section-readings" class="glass-card" style="display:none">
+          <div class="section-title mb-3">📊 Patient Readings & History</div>
+          <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px">Select a patient to view their complete history and clinical conditions.</p>
           <div style="overflow-x:auto">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Timestamp</th>
                   <th>Patient ID</th>
-                  <th>Arrhythmia</th>
-                  <th>Heart Attack</th>
-                  <th>Stroke</th>
-                  <th>Hypertension</th>
-                  <th>HR</th>
-                  <th>SpO2</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Gender</th>
+                  <th>Total Readings</th>
+                  <th>Action</th>
                 </tr>
               </thead>
-              <tbody id="readingsTableBody">
+              <tbody id="readingsPatientsTableBody">
               </tbody>
             </table>
           </div>
         </div>
 
         <!-- DATABASE SECTION -->
-        <div id="section-database" class="glass-card"
-             style="display:none">
+        <div id="section-database" class="glass-card" style="display:none">
           <div class="section-title mb-3">💾 Database Tables</div>
           <div id="dbTablesContent"></div>
         </div>
 
         <!-- SETTINGS SECTION -->
-        <div id="section-settings" class="glass-card"
-             style="display:none">
-          <div class="section-title mb-3">⚙️ Settings</div>
-          <div class="form-group">
-            <label class="form-label">Admin Username</label>
-            <input type="text" class="form-input"
-                   id="newAdminUser" placeholder="New username">
+        <div id="section-settings" class="glass-card" style="display:none">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px">
+            <!-- Update Own Creds -->
+            <div style="border-right: 1px solid var(--border-glass); padding-right:30px">
+              <div class="section-title mb-3" style="font-size:18px">👤 My Account</div>
+              <div class="form-group">
+                <label class="form-label">New Admin Username</label>
+                <input type="text" class="form-input" id="newAdminUser" placeholder="New username">
+              </div>
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-input" id="newAdminPass" placeholder="New password">
+              </div>
+              <button class="btn btn-primary" onclick="updateCredentials()">Update My Access</button>
+            </div>
+
+            <!-- Add New Admin -->
+            <div>
+              <div class="section-title mb-3" style="font-size:18px">➕ Add New Admin</div>
+              <div class="form-group">
+                <label class="form-label">Admin Name</label>
+                <input type="text" class="form-input" id="addAdminName" placeholder="Admin username">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-input" id="addAdminPass" placeholder="Password">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input type="password" class="form-input" id="addAdminConfirm" placeholder="Confirm password">
+              </div>
+              <button class="btn btn-outline" style="border-color:var(--cyan); color:var(--cyan)" onclick="submitAddAdmin()">Create Admin Account</button>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">New Password</label>
-            <input type="password" class="form-input"
-                   id="newAdminPass" placeholder="New password">
-          </div>
-          <button class="btn btn-primary"
-                  onclick="updateCredentials()">
-            Save Changes
-          </button>
         </div>
 
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row Detail Modal -->
+<div class="modal-overlay" id="rowDetailModal">
+  <div class="modal-box" style="max-width:600px">
+    <button class="modal-close" onclick="closeRowDetailModal()">✕</button>
+    <h2 class="section-title" id="rowDetailTitle" style="font-size:20px; margin-bottom:20px">📋 Record Details</h2>
+    <div id="rowDetailContent" style="display:grid; gap:10px"></div>
+    <div style="margin-top:30px; text-align:right">
+        <button class="btn btn-outline btn-sm" onclick="closeRowDetailModal()">Close View</button>
     </div>
   </div>
 </div>

@@ -615,6 +615,7 @@ async function loadTableData(tableName, page) {
         return;
     }
 
+    currentTableData = data.rows || []; // Cache for Detail View
     renderTableData(data, viewer);
 }
 
@@ -725,12 +726,11 @@ function renderTableData(data, viewer) {
             </th>`;
     });
 
-    if (!isProtected) {
+        // Action Column
         html += `
-            <th style="width:80px;text-align:center">
-                Delete
+            <th style="width:120px;text-align:center">
+                Actions
             </th>`;
-    }
 
     html += `
                     </tr>
@@ -802,7 +802,18 @@ function renderTableData(data, viewer) {
                     </td>`;
             });
 
-            // Delete button
+            // Action buttons
+            html += `
+                <td style="text-align:center">
+                    <div style="display:flex;gap:6px;justify-content:center">
+                        <button
+                            class="btn btn-outline btn-sm"
+                            style="padding:5px 10px; font-size:12px"
+                            onclick="showRowDetail('${table_name}', ${row.id})"
+                            title="View full details">
+                            👁
+                        </button>`;
+
             if (!isProtected) {
                 const displayName =
                     row.patient_id ||
@@ -815,7 +826,6 @@ function renderTableData(data, viewer) {
                         : 'reading';
 
                 html += `
-                    <td style="text-align:center">
                         <button
                             class="btn btn-sm"
                             style="background:rgba(255,68,68,0.1);
@@ -832,10 +842,9 @@ function renderTableData(data, viewer) {
                             )"
                             title="Delete row ${row.id}">
                             🗑
-                        </button>
-                    </td>`;
+                        </button>`;
             }
-
+            html += `</div></td>`;
             html += '</tr>';
         });
     }
@@ -1109,83 +1118,60 @@ function showSection(name) {
 }
 
 async function loadAllReadings() {
-    const tbody = document.getElementById('readingsTableBody');
+    const tbody = document.getElementById('readingsPatientsTableBody');
     if (!tbody) return;
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="9" style="text-align:center; padding:20px">
+            <td colspan="6" style="text-align:center; padding:20px">
                 <div class="spinner"></div>
             </td>
         </tr>`;
 
     try {
-        const data = await api.get('/api/admin/readings');
-        const readings = data.readings || [];
+        const data = await api.get('/api/admin/patients');
+        const patients = data.patients || [];
 
-        if (readings.length === 0) {
+        if (patients.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9"
-                        style="text-align:center;
-                                padding:30px;
-                                color:var(--text-muted)">
-                        No readings recorded yet
+                    <td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted)">
+                        No patients found to view readings for.
                     </td>
                 </tr>`;
             return;
         }
 
-        tbody.innerHTML = readings.map(r => `
+        tbody.innerHTML = patients.map(p => `
             <tr>
-                <td style="font-size:12px;
-                            color:var(--text-secondary);
-                            white-space:nowrap">
-                    ${formatTimestamp(r.timestamp)}
-                </td>
-                <td class="text-cyan"
-                    style="font-weight:600">
-                    ${r.patient_id}
-                </td>
-                <td style="color:${getRiskColor(r.arrhythmia_risk || 0)};font-weight:600">
-                    ${(r.arrhythmia_risk || 0).toFixed(1)}%
-                </td>
-                <td style="color:${getRiskColor(r.heartattack_risk || 0)};font-weight:600">
-                    ${(r.heartattack_risk || 0).toFixed(1)}%
-                </td>
-                <td style="color:${getRiskColor(r.stroke_risk || 0)};font-weight:600">
-                    ${(r.stroke_risk || 0).toFixed(1)}%
-                </td>
-                <td style="color:${getRiskColor(r.hypertension_risk || 0)};font-weight:600">
-                    ${(r.hypertension_risk || 0).toFixed(1)}%
-                </td>
-                <td>${r.heart_rate || '--'}</td>
-                <td>${r.spo2 || '--'}</td>
+                <td class="text-cyan" style="font-weight:700">${p.patient_id}</td>
+                <td style="font-weight:600">${p.name}</td>
+                <td style="font-size:13px; color:var(--text-secondary)">${p.contact || 'No contact'}</td>
+                <td>${p.gender}</td>
                 <td>
-                    <button
-                        class="btn btn-sm"
-                        style="background:rgba(255,68,68,0.15);
-                                color:var(--red);
-                                border:1px solid
-                                rgba(255,68,68,0.3)"
-                        onclick="confirmDeleteReading(${r.id}, ${readings.indexOf(r) + 1})">
-                        🗑
+                    <span class="badge ${p.reading_count > 0 ? 'badge-online' : 'badge-offline'}">
+                        ${p.reading_count || 0} readings
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="viewPatientHistoryFromReadings('${p.patient_id}')">
+                        📋 View Readings
                     </button>
                 </td>
             </tr>
         `).join('');
 
     } catch (e) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9"
-                    style="text-align:center;
-                            color:var(--red);
-                            padding:20px">
-                    ❌ Failed to load readings
-                </td>
-            </tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--red); padding:20px">❌ Failed to load patient list</td></tr>`;
     }
+}
+
+function viewPatientHistoryFromReadings(pid) {
+    // We reuse the existing modal logic since it is already perfect for viewing history
+    openPatientModal(pid);
+    setTimeout(() => {
+        loadPatientHistoryInModal();
+    }, 300);
 }
 
 // =============================================================
@@ -1217,8 +1203,7 @@ async function updateCredentials() {
         });
 
         if (data.success) {
-            alert('✅ Credentials updated successfully!\n' +
-                'Please log in again with new credentials.');
+            alert('✅ Credentials updated successfully!\nPlease log in again with new credentials.');
             adminLogout();
         } else {
             alert(`❌ Failed to update credentials: ${data.message || 'Unknown error'}`);
@@ -1226,6 +1211,41 @@ async function updateCredentials() {
 
     } catch (e) {
         alert('❌ Connection error. Try again.');
+    }
+}
+
+async function submitAddAdmin() {
+    const name = document.getElementById('addAdminName')?.value.trim();
+    const pass = document.getElementById('addAdminPass')?.value;
+    const conf = document.getElementById('addAdminConfirm')?.value;
+
+    if (!name || !pass || !conf) {
+        alert('All fields are required.');
+        return;
+    }
+
+    if (pass !== conf) {
+        alert('Passwords do not match!');
+        return;
+    }
+
+    try {
+        const data = await api.post('/api/admin/add-admin', {
+            username: name,
+            password: pass
+        });
+
+        if (data.success) {
+            alert(`✅ Admin "${name}" created successfully!`);
+            document.getElementById('addAdminName').value = '';
+            document.getElementById('addAdminPass').value = '';
+            document.getElementById('addAdminConfirm').value = '';
+            loadDbTables(); // Refresh table counts
+        } else {
+            alert(`❌ Failed: ${data.message}`);
+        }
+    } catch (e) {
+        alert('❌ Connection error adding admin.');
     }
 }
 
@@ -1386,4 +1406,58 @@ function getConditionStyle(condition) {
     return 'background:rgba(0,230,118,0.1);' +
         'border:1px solid rgba(0,230,118,0.2);' +
         'color:var(--green)';
+}
+
+// =============================================================
+// ROW DETAIL VIEW (Database Tables)
+// =============================================================
+let currentTableData = null; // Cache last loaded table rows
+
+function showRowDetail(tableName, rowId) {
+    // In a real app we'd fetch specific ID or use cache
+    // For now, search in DOM or refetch. Since we just rendered the table, 
+    // we can use a simpler approach: finding the row in the viewer's data
+    // But since `renderTableData` doesn't save to global yet, let's just use currentTableData if available
+    
+    // Actually, it's better to refetch specific record or pass it as JSON to the button
+    // I will modify the loop to pass the row index
+    // Wait, let's keep it simple: fetch all data for that specific ID or find in global
+    // I'll modify `renderTableData` slightly to cache the rows
+    
+    const row = currentTableData.find(r => r.id === rowId);
+    if (!row) return;
+
+    const modal = document.getElementById('rowDetailModal');
+    const content = document.getElementById('rowDetailContent');
+    const title = document.getElementById('rowDetailTitle');
+    
+    title.textContent = `📋 Record: ${tableName} #${rowId}`;
+    
+    let html = '';
+    for (const [key, val] of Object.entries(row)) {
+        let displayVal = val;
+        let isSensitive = (key === 'password' || key === 'token');
+        
+        if (val === null) displayVal = 'NULL';
+        else if (isSensitive) {
+            // Here we show the actual value (unmasked) for official admin view
+            // as requested "add view option to the details when opened in website"
+            displayVal = `<span style="color:var(--cyan); word-break:break-all">${val}</span>`;
+        }
+
+        html += `
+            <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid rgba(255,255,255,0.06)">
+                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px">${key}</div>
+                <div style="font-size:14px; color:white; font-family:monospace">${displayVal}</div>
+            </div>
+        `;
+    }
+    
+    content.innerHTML = html;
+    modal.classList.add('show');
+}
+
+function closeRowDetailModal() {
+    const modal = document.getElementById('rowDetailModal');
+    if (modal) modal.classList.remove('show');
 }

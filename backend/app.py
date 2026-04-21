@@ -214,6 +214,21 @@ def admin_delete_reading(rid):
     token = request.headers.get('X-Admin-Token', '')
     return jsonify(db.delete_reading(rid, token))
 
+@app.route('/api/admin/add-admin', methods=['POST'])
+def admin_add_new():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    
+    data = request.json or {}
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({"success": False, "message": "Username and password required"}), 400
+        
+    return jsonify(db.register_admin(username, password))
+
 # =============================================================
 # ── SECTION 4: MONITOR & IOT ─────────────────────────────────
 # =============================================================

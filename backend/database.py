@@ -393,6 +393,25 @@ def admin_login(username, password):
     finally:
         conn.close()
 
+def register_admin(username, password):
+    """Register a new admin user"""
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Database connection failed"}
+    
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM admin WHERE username = %s", (username,))
+            if cur.fetchone():
+                return {"success": False, "message": "Username already exists"}
+            
+            cur.execute("INSERT INTO admin (username, password) VALUES (%s, %s)", (username, hashed))
+            return {"success": True}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+    finally:
+        conn.close()
+
 def verify_token(token):
     """Verify admin session token"""
     if not token: return False
