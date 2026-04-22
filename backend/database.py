@@ -551,7 +551,7 @@ def get_table_data(table_name, page=1, per_page=50, search='', sort_by='id', sor
             for r in rows:
                 for k, v in r.items():
                     if isinstance(v, (datetime.datetime, datetime.date)): r[k] = str(v)
-                    # Unified raw visibility for administrative inspection
+                    if table_name == 'admin' and k in ['password', 'token']: r[k] = '••••••••'
             
             return {"success": True, "table_name": table_name, "columns": columns, "rows": rows, "total_rows": total_rows, "page": page, "per_page": per_page, "total_pages": total_pages}
     finally:

@@ -449,7 +449,7 @@
   <div class="modal-box" style="max-width:600px">
     <button class="modal-close" onclick="closeRowDetailModal()">✕</button>
     <h2 class="section-title" id="rowDetailTitle" style="font-size:20px; margin-bottom:20px">📋 Record Details</h2>
-    <div id="rowDetailContent" class="modal-grid" style="gap:10px"></div>
+    <div id="rowDetailContent" style="display:grid; gap:10px"></div>
     <div style="margin-top:30px; text-align:right">
         <button class="btn btn-outline btn-sm" onclick="closeRowDetailModal()">Close View</button>
     </div>
@@ -479,7 +479,8 @@
       </div>
 
       <!-- Patient Details Grid -->
-      <div class="modal-grid" id="modalDetailsGrid">
+      <div style="display:grid;grid-template-columns:1fr 1fr;
+           gap:12px;margin-bottom:24px" id="modalDetailsGrid">
       </div>
 
       <div class="divider"></div>

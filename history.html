@@ -371,22 +371,18 @@
   }
 
   async function selectPatient(pid) {
-    const dropdown = document.getElementById('searchResultsDropdown');
-    if (dropdown) dropdown.style.display = 'none';
+    document.getElementById('searchResultsDropdown').style.display = 'none';
     document.getElementById('searchInput').value = pid;
     
     try {
-      // Parallelize requests for faster loading
-      const [readingsRes, searchRes] = await Promise.all([
-        api.get(`/api/admin/readings?patient_id=${pid}`),
-        api.get(`/api/patients/search?q=${pid}`)
-      ]);
-
-      if (searchRes.success && searchRes.patients) {
-        const patient = searchRes.patients.find(p => p.patient_id === pid);
-        if (patient) {
-          displayPatient(patient, readingsRes.readings || []);
-        }
+      // For specific patient deep dive
+      const data = await api.get(`/api/admin/readings?patient_id=${pid}`);
+      // Find full patient details from allPatients or another call
+      const patientsData = await api.get(`/api/patients/search?q=${pid}`);
+      const patient = patientsData.patients.find(p => p.patient_id === pid);
+      
+      if (patient) {
+        displayPatient(patient, data.readings || []);
       }
     } catch (e) {
       showAlert('alertBox', 'error', 'Failed to load health history.');
