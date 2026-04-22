@@ -86,7 +86,9 @@ def init_database():
                     gender           VARCHAR(20) NOT NULL,
                     contact          VARCHAR(50) DEFAULT '',
                     medical_history  TEXT,
-                    registered_on    DATETIME NOT NULL
+                    registered_on    DATETIME NOT NULL,
+                    INDEX idx_name (name),
+                    INDEX idx_contact (contact)
                 )
             ''')
 
@@ -213,37 +215,66 @@ def register_patient(name, age, weight, gender, contact='', medical_history=''):
     finally:
         conn.close()
 
-def search_patient(query):
-    """Search patient by ID, name, contact, or history (fuzzy)"""
+def search_patients(query, page=1, per_page=10):
+    """Fuzzy search patients by ID, Name or Contact (Google-style)"""
     conn = get_connection()
-    if not conn: return []
+    if not conn: return {"success": False, "patients": [], "total": 0}
     
     try:
         with conn.cursor() as cur:
-            # We search across patient_id, name, contact, and medical_history
-            search_val = f'%{query}%'
+            q = f"%{query}%"
+            # Count total
             cur.execute('''
-                SELECT p.*,
+                SELECT COUNT(*) as count 
+                FROM   patients 
+                WHERE  patient_id LIKE %s 
+                   OR  LOWER(name) LIKE LOWER(%s)
+                   OR  contact LIKE %s
+            ''', (q, q, q))
+            total = cur.fetchone()['count']
+            
+            offset = (page - 1) * per_page
+            cur.execute('''
+                SELECT p.*, 
                        COUNT(r.id)      AS reading_count,
                        MAX(r.timestamp) AS last_visit
                 FROM   patients p
-                LEFT JOIN readings r
-                       ON p.patient_id = r.patient_id
-                WHERE  p.patient_id LIKE %s
+                LEFT JOIN readings r ON p.patient_id = r.patient_id
+                WHERE  p.patient_id LIKE %s 
                    OR  LOWER(p.name) LIKE LOWER(%s)
                    OR  p.contact LIKE %s
-                   OR  LOWER(p.medical_history) LIKE LOWER(%s)
                 GROUP  BY p.id
-                ORDER  BY p.name ASC
-                LIMIT  10
-            ''', (search_val, search_val, search_val, search_val))
+                ORDER  BY p.registered_on DESC
+                LIMIT %s OFFSET %s
+            ''', (q, q, q, per_page, offset))
+            
             rows = cur.fetchall()
             for row in rows:
-                if row.get('registered_on'):
-                    row['registered_on'] = str(row['registered_on'])
-                if row.get('last_visit'):
-                    row['last_visit'] = str(row['last_visit'])
-            return rows
+                if row['registered_on']: row['registered_on'] = str(row['registered_on'])
+                if row['last_visit']: row['last_visit'] = str(row['last_visit'])
+            
+            return {"success": True, "patients": rows, "total": total}
+    finally:
+        conn.close()
+
+def get_patient_by_id(patient_id):
+    """Fetch single patient by exact ID"""
+    conn = get_connection()
+    if not conn: return None
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT p.*, COUNT(r.id) AS reading_count, MAX(r.timestamp) AS last_visit
+                FROM   patients p
+                LEFT JOIN readings r ON p.patient_id = r.patient_id
+                WHERE  p.patient_id = %s
+                GROUP  BY p.id
+            ''', (patient_id,))
+            row = cur.fetchone()
+            if row:
+                if row['registered_on']: row['registered_on'] = str(row['registered_on'])
+                if row['last_visit']: row['last_visit'] = str(row['last_visit'])
+            return row
     finally:
         conn.close()
 
@@ -282,38 +313,94 @@ def get_patients_by_age(age):
     finally:
         conn.close()
 
-def get_all_patients():
-    """Get all patients with reading count (admin)"""
+def get_all_patients(query='', page=1, per_page=50):
+    """Get patients with optional search and pagination (admin)"""
+    if query:
+        return search_patients(query, page, per_page)
+    
     conn = get_connection()
-    if not conn: return []
+    if not conn: return {"success": False, "patients": [], "total": 0}
     try:
         with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) as count FROM patients")
+            total = cur.fetchone()['count']
+            
+            offset = (page - 1) * per_page
             cur.execute('''
                 SELECT p.*, COUNT(r.id) AS reading_count, MAX(r.timestamp) AS last_visit
                 FROM   patients p
                 LEFT JOIN readings r ON p.patient_id = r.patient_id
                 GROUP  BY p.id
                 ORDER  BY p.registered_on DESC
-            ''')
+                LIMIT %s OFFSET %s
+            ''', (per_page, offset))
             rows = cur.fetchall()
             for r in rows:
                 if r['registered_on']: r['registered_on'] = str(r['registered_on'])
                 if r['last_visit']: r['last_visit'] = str(r['last_visit'])
-            return rows
+            return {"success": True, "patients": rows, "total": total}
     finally:
         conn.close()
 
-def get_all_readings(limit=100):
-    """Get all readings newest first (admin)"""
+def get_active_patients(query='', page=1, per_page=50):
+    """Get patients who have at least one reading (Paginated + Filtered)"""
     conn = get_connection()
-    if not conn: return []
+    if not conn: return {"success": False, "patients": [], "total": 0}
     try:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM readings ORDER BY timestamp DESC LIMIT %s', (limit,))
+            q_str = f"%{query}%"
+            where_clause = "HAVING reading_count > 0"
+            if query:
+                where_clause = f"WHERE (p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s) {where_clause}"
+            
+            # Subquery for total count is needed for HAVING
+            cur.execute(f'''
+                SELECT COUNT(*) as count FROM (
+                    SELECT p.id, COUNT(r.id) as reading_count
+                    FROM patients p
+                    LEFT JOIN readings r ON p.patient_id = r.patient_id
+                    {f"WHERE p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s" if query else ""}
+                    GROUP BY p.id
+                    HAVING reading_count > 0
+                ) as active_pts
+            ''', (q_str, q_str, q_str) if query else ())
+            total = cur.fetchone()['count']
+
+            offset = (page - 1) * per_page
+            cur.execute(f'''
+                SELECT p.*, COUNT(r.id) AS reading_count, MAX(r.timestamp) AS last_visit
+                FROM   patients p
+                LEFT JOIN readings r ON p.patient_id = r.patient_id
+                {f"WHERE p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s" if query else ""}
+                GROUP  BY p.id
+                HAVING reading_count > 0
+                ORDER  BY last_visit DESC
+                LIMIT %s OFFSET %s
+            ''', ( (q_str, q_str, q_str, per_page, offset) if query else (per_page, offset) ))
+            
+            rows = cur.fetchall()
+            for r in rows:
+                if r['registered_on']: r['registered_on'] = str(r['registered_on'])
+                if r['last_visit']: r['last_visit'] = str(r['last_visit'])
+            return {"success": True, "patients": rows, "total": total}
+    finally:
+        conn.close()
+
+def get_all_readings(page=1, per_page=100):
+    """Get all readings newest first (admin)"""
+    conn = get_connection()
+    if not conn: return {"success": False, "readings": [], "total": 0}
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) as count FROM readings")
+            total = cur.fetchone()['count']
+            
+            offset = (page - 1) * per_page
+            cur.execute('SELECT * FROM readings ORDER BY timestamp DESC LIMIT %s OFFSET %s', (per_page, offset))
             rows = cur.fetchall()
             for r in rows:
                 if r['timestamp']: r['timestamp'] = str(r['timestamp'])
-            return rows
+            return {"success": True, "readings": rows, "total": total}
     finally:
         conn.close()
 
@@ -399,25 +486,6 @@ def admin_login(username, password):
     finally:
         conn.close()
 
-def register_admin(username, password):
-    """Register a new admin user"""
-    conn = get_connection()
-    if not conn: return {"success": False, "message": "Database connection failed"}
-    
-    hashed = hashlib.sha256(password.encode()).hexdigest()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id FROM admin WHERE username = %s", (username,))
-            if cur.fetchone():
-                return {"success": False, "message": "Username already exists"}
-            
-            cur.execute("INSERT INTO admin (username, password) VALUES (%s, %s)", (username, hashed))
-            return {"success": True}
-    except Exception as e:
-        return {"success": False, "message": str(e)}
-    finally:
-        conn.close()
-
 def verify_token(token):
     """Verify admin session token"""
     if not token: return False
@@ -466,6 +534,43 @@ def delete_patient(patient_id, token):
             return {"success": True, "message": f"Patient {name} deleted", "readings_deleted": readings_deleted}
     except Exception as e:
         return {"success": False, "message": str(e)}
+    finally:
+        conn.close()
+
+def add_admin(username, password):
+    """Add a new administrator"""
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Database connection failed"}
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    try:
+        with conn.cursor() as cur:
+            # Check if exists
+            cur.execute("SELECT id FROM admin WHERE username = %s", (username,))
+            if cur.fetchone():
+                return {"success": False, "message": "Username already exists"}
+            
+            cur.execute("INSERT INTO admin (username, password) VALUES (%s, %s)", (username, hashed))
+            return {"success": True, "message": f"Admin {username} added successfully"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+    finally:
+        conn.close()
+
+def get_raw_value(table_name, row_id, column_name):
+    """Get unmasked value for a specific cell (internal use only)"""
+    allowed_tables = ['admin']
+    if table_name not in allowed_tables: return None
+    
+    conn = get_connection()
+    if not conn: return None
+    try:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT {column_name} FROM {table_name} WHERE id = %s", (row_id,))
+            row = cur.fetchone()
+            return row[column_name] if row else None
+    except Exception as e:
+        print(f"[DB] Error revealing value: {e}")
+        return None
     finally:
         conn.close()
 

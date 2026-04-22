@@ -217,12 +217,23 @@
       </div>
       <span class="brand-text">CardioCare AI</span>
     </a>
-    <ul class="navbar-menu">
+
+    <!-- Global Search Bar -->
+    <div class="nav-search-container">
+      <svg class="lucid-svg nav-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="nav-search-input" id="globalSearchInput" 
+             placeholder="Search patients (ID, Name)..."
+             onkeydown="if(event.key==='Enter') executeGlobalSearch()">
+    </div>
+
+    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>
+
+    <ul class="navbar-menu" id="navbarMenu">
       <li><a href="index.html" class="active">Home</a></li>
       <li><a href="new_patient.html">New Patient</a></li>
       <li><a href="history.html">Patient History</a></li>
       <li><a href="live_monitor.html">Live Monitor</a></li>
-      <li><a href="admin.html" class="navbar-admin-btn">⚙ Admin</a></li>
+      <li><a href="admin.html" class="navbar-admin-btn"><svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Admin</a></li>
     </ul>
   </nav>
 
@@ -269,7 +280,9 @@
 
       <!-- CARD 1: Quick Actions -->
       <div class="glass-card">
-        <div class="section-title">⚡ Quick Actions</div>
+        <div class="section-title">
+          <svg class="lucid-svg" style="width:20px; height:20px; vertical-align:middle; margin-right:8px" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Quick Actions
+        </div>
         <div class="section-subtitle">Start patient session</div>
 
         <a href="new_patient.html" class="quick-action-btn qa-primary">
@@ -311,7 +324,9 @@
 
       <!-- CARD 2: System Status -->
       <div class="glass-card">
-        <div class="section-title">📡 System Status</div>
+        <div class="section-title">
+          <img src="assets/img/lucid_monitor.png" style="width:20px; height:20px; vertical-align:middle; margin-right:8px"> System Status
+        </div>
         <div class="section-subtitle">Real-time hardware health</div>
 
         <div class="status-item">
@@ -377,14 +392,16 @@
         <div class="mt-3">
           <button class="btn btn-outline btn-sm w-100"
                   onclick="checkSystemStatus()">
-            🔄 Refresh Status
+            <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Refresh Status
           </button>
         </div>
       </div>
 
       <!-- CARD 3: Research Details -->
       <div class="glass-card">
-        <div class="section-title">🔬 Research Details</div>
+        <div class="section-title">
+          <img src="assets/img/lucid_search.png" style="width:20px; height:20px; vertical-align:middle; margin-right:8px"> Research Details
+        </div>
         <div class="section-subtitle">Model specifications</div>
 
         <div class="research-item">
@@ -434,11 +451,11 @@
     <!-- BOTTOM CTA -->
     <div class="glass-card bottom-cta">
       <p style="color:var(--text-secondary);margin-bottom:20px;font-size:15px">
-        🚀 Select a patient profile and connect the IoT device
+        Select a patient profile and connect the IoT device
         to begin real-time cardiovascular monitoring
       </p>
       <a href="live_monitor.html" class="btn btn-primary btn-lg">
-        📡 View Live Monitor
+        <img src="assets/img/lucid_monitor.png" style="width:20px; margin-right:10px; vertical-align:middle"> View Live Monitor
       </a>
     </div>
 

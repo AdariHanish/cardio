@@ -133,20 +133,31 @@
 <div class="page-wrapper">
 
   <!-- NAVBAR -->
-  <nav class="navbar">
-    <a href="index.html" class="navbar-brand">
+  <nav class="navbar">    <a href="index.html" class="navbar-brand">
       <div class="brand-icon">
         <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
       </div>
       <span class="brand-text">CardioCare AI</span>
     </a>
-    <ul class="navbar-menu">
+
+    <!-- Global Search Bar -->
+    <div class="nav-search-container">
+      <svg class="lucid-svg nav-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="nav-search-input" id="globalSearchInput" 
+             placeholder="Search patients (ID, Name)..."
+             onkeydown="if(event.key==='Enter') executeGlobalSearch()">
+    </div>
+
+    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>
+
+    <ul class="navbar-menu" id="navbarMenu">
       <li><a href="index.html">Home</a></li>
       <li><a href="new_patient.html" class="active">New Patient</a></li>
       <li><a href="history.html">Patient History</a></li>
       <li><a href="live_monitor.html">Live Monitor</a></li>
-      <li><a href="admin.html" class="navbar-admin-btn">⚙ Admin</a></li>
+      <li><a href="admin.html" class="navbar-admin-btn"><svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Admin</a></li>
     </ul>
+
   </nav>
 
   <div class="main-content">
@@ -267,14 +278,14 @@
       <div class="id-result-card" id="idResultCard">
 
         <div style="text-align:center;margin-bottom:16px">
-          <span style="font-size:40px">✅</span>
+          <svg class="lucid-svg" style="width:40px; height:40px; margin-bottom:8px" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
           <h3 style="color:var(--green);margin-top:8px">
             Patient Registered Successfully!
           </h3>
         </div>
 
         <div class="id-note">
-          ⚠️ Please note down this Patient ID — you will need it
+          <svg class="lucid-svg" style="width:14px; height:14px; vertical-align:middle; margin-right:6px" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Please note down this Patient ID — you will need it
           for all future visits
         </div>
 
@@ -315,11 +326,11 @@
         <div style="display:flex;gap:12px;flex-wrap:wrap">
           <a id="goMonitorBtn" href="live_monitor.html"
              class="btn btn-primary" style="flex:1">
-            📡 Start Monitoring
+            <img src="assets/img/lucid_monitor.png" style="width:16px; margin-right:8px; vertical-align:middle"> Start Monitoring
           </a>
           <button onclick="resetForm()"
                   class="btn btn-outline" style="flex:1">
-            ➕ Add Another Patient
+            <svg class="lucid-svg" style="width:14px; height:14px; margin-right:8px; vertical-align:middle" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Another Patient
           </button>
         </div>
 
@@ -348,7 +359,7 @@
     }
 
     btn.disabled     = true;
-    btn.textContent  = '⏳ Registering...';
+    btn.textContent  = 'Registering...';
 
     const data = await api.post('/api/patients/register', {
       name, 
@@ -378,9 +389,9 @@
 
       // Update steps
       document.getElementById('step1Circle').className = 'step-circle done';
-      document.getElementById('step1Circle').textContent = '✓';
+      document.getElementById('step1Circle').innerHTML = '<svg class="lucid-svg" viewBox="0 0 24 24" style="width:18px"><polyline points="20 6 9 17 4 12"/></svg>';
       document.getElementById('step2Circle').className = 'step-circle done';
-      document.getElementById('step2Circle').textContent = '✓';
+      document.getElementById('step2Circle').innerHTML = '<svg class="lucid-svg" viewBox="0 0 24 24" style="width:18px"><polyline points="20 6 9 17 4 12"/></svg>';
       document.getElementById('step3Circle').className = 'step-circle active';
 
       // Scroll to result
@@ -394,7 +405,7 @@
     }
 
     btn.disabled    = false;
-    btn.textContent = '🆔 Register & Generate ID';
+    btn.textContent = 'Register & Generate ID';
   }
 
   function resetForm() {

@@ -148,20 +148,31 @@
 <body>
 <div class="page-wrapper">
 
-  <nav class="navbar">
-    <a href="index.html" class="navbar-brand">
+  <nav class="navbar">    <a href="index.html" class="navbar-brand">
       <div class="brand-icon">
         <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
       </div>
       <span class="brand-text">CardioCare AI</span>
     </a>
-    <ul class="navbar-menu">
+
+    <!-- Global Search Bar -->
+    <div class="nav-search-container">
+      <svg class="lucid-svg nav-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="nav-search-input" id="globalSearchInput" 
+             placeholder="Search patients (ID, Name)..."
+             onkeydown="if(event.key==='Enter') executeGlobalSearch()">
+    </div>
+
+    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>
+
+    <ul class="navbar-menu" id="navbarMenu">
       <li><a href="index.html">Home</a></li>
       <li><a href="new_patient.html">New Patient</a></li>
       <li><a href="history.html">Patient History</a></li>
       <li><a href="live_monitor.html" class="active">Live Monitor</a></li>
-      <li><a href="admin.html" class="navbar-admin-btn">⚙ Admin</a></li>
+      <li><a href="admin.html" class="navbar-admin-btn"><svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Admin</a></li>
     </ul>
+
   </nav>
 
   <div class="main-content">
@@ -171,7 +182,7 @@
       <div class="flex-between" style="flex-wrap:wrap;gap:12px">
         <div>
           <div class="section-title" style="font-size:18px">
-            📡 Live Monitoring Session
+            <img src="assets/img/lucid_monitor.png" style="width:20px; height:20px; vertical-align:middle; margin-right:8px"> Live Monitoring Session
           </div>
           <div id="currentPatientInfo" style="font-size:14px;
                color:var(--text-secondary);margin-top:4px">
@@ -236,7 +247,7 @@
         <div class="glass-card" style="margin-bottom:20px">
           <div class="flex-between mb-2">
             <div class="section-title" style="font-size:18px">
-              📡 Live ECG Signal
+              <img src="assets/img/lucid_monitor.png" style="width:20px; height:20px; vertical-align:middle; margin-right:8px"> Live ECG Signal
             </div>
             <span class="badge badge-warning" id="ecgQuality">
               Waiting
@@ -247,7 +258,9 @@
             <div class="ecg-grid-lines"></div>
             <canvas id="ecgCanvas"></canvas>
             <div class="ecg-waiting" id="ecgWaiting">
-              <div style="font-size:36px;margin-bottom:8px">📡</div>
+              <div style="margin-bottom:8px">
+                <img src="assets/img/lucid_monitor.png" style="width:40px; opacity:0.5">
+              </div>
               Waiting for IoT Device...
             </div>
           </div>
@@ -384,7 +397,7 @@
         <div id="futureRiskSection" style="display:none">
           <div style="font-size:13px;font-weight:600;
                color:var(--cyan);margin-bottom:10px">
-            🔮 Future Risk Prediction
+            <img src="assets/img/lucid_ai_brain.png" style="width:16px; margin-right:8px; vertical-align:middle"> Future Risk Prediction
           </div>
           <div style="font-size:13px;color:var(--text-secondary);
                line-height:1.7" id="futureRiskText">

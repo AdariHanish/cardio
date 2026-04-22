@@ -203,14 +203,25 @@
       </div>
       <span class="brand-text">CardioCare AI</span>
     </a>
-    <ul class="navbar-menu">
+
+    <!-- Global Search Bar -->
+    <div class="nav-search-container">
+      <svg class="lucid-svg nav-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="nav-search-input" id="globalSearchInput" 
+             placeholder="Search patients (ID, Name)..."
+             onkeydown="if(event.key==='Enter') executeGlobalSearch()">
+    </div>
+
+    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>
+
+    <ul class="navbar-menu" id="navbarMenu">
       <li><a href="index.html">Home</a></li>
       <li><a href="admin_dashboard.html" class="active">
-        🛡️ Admin Dashboard</a></li>
+        <img src="assets/img/lucid_ai_brain.png" style="width:16px; height:16px; vertical-align:middle; margin-right:4px"> Admin Dashboard</a></li>
       <li>
         <a href="#" onclick="adminLogout()"
            style="color:var(--red)">
-          🚪 Logout
+          <svg class="lucid-svg" style="width:16px; height:16px; vertical-align:middle; margin-right:4px" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout
         </a>
       </li>
     </ul>
@@ -221,7 +232,7 @@
     <div class="flex-between mb-3" style="flex-wrap:wrap;gap:12px">
       <div>
         <div class="section-title" style="font-size:26px">
-          🛡️ Admin Dashboard
+          <img src="assets/img/lucid_ai_brain.png" style="width:32px; height:32px; vertical-align:middle; margin-right:8px"> Admin Dashboard
         </div>
         <div style="font-size:14px;color:var(--text-secondary)">
           Logged in as:
@@ -231,11 +242,11 @@
       <div style="display:flex;gap:10px">
         <button class="btn btn-outline btn-sm"
                 onclick="refreshAllData()">
-          🔄 Refresh
+          <svg class="lucid-svg" style="width:14px; height:14px; margin-right:4px" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh
         </button>
         <button class="btn btn-danger btn-sm"
                 onclick="adminLogout()">
-          🚪 Logout
+          <svg class="lucid-svg" style="width:14px; height:14px; margin-right:4px" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout
         </button>
       </div>
     </div>
@@ -319,9 +330,9 @@
         <!-- PATIENTS SECTION -->
         <div id="section-patients" class="glass-card">
           <div class="flex-between mb-3" style="flex-wrap:wrap;gap:12px">
-            <div class="section-title">👥 All Patients</div>
+            <div class="section-title"><img src="assets/img/lucid_patient.png" style="width:24px; height:24px; vertical-align:middle; margin-right:8px"> All Patients</div>
             <div style="font-size:13px;color:var(--text-secondary)">
-              Click any row to view full details & history
+              Click any row to view full details
             </div>
           </div>
 
@@ -329,25 +340,22 @@
           <div class="admin-search-bar">
             <input type="text" class="form-input"
                    id="adminSearchInput" style="flex:1;min-width:200px"
-                   placeholder="Search by Name, ID, or Age..."
-                   oninput="filterPatients()">
+                   placeholder="Search by Name, ID, or Contact..."
+                   onkeydown="if(event.key==='Enter') executeSearch('patients')">
+            
+            <button class="btn btn-primary" onclick="executeSearch('patients')">
+              <svg class="lucid-svg-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search
+            </button>
+
             <select class="search-filter" id="genderFilter"
-                    onchange="filterPatients()">
+                    onchange="executeSearch('patients')">
               <option value="">All Genders</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
             </select>
-            <select class="search-filter" id="ageFilter"
-                    onchange="filterPatients()">
-              <option value="">All Ages</option>
-              <option value="0-30">Under 30</option>
-              <option value="30-50">30–50</option>
-              <option value="50-70">50–70</option>
-              <option value="70-200">Above 70</option>
-            </select>
           </div>
 
-          <div style="overflow-x:auto">
+          <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -372,86 +380,102 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Pagination Button -->
+          <div class="load-more-container" id="patientsLoadMore">
+            <!-- Dynamically populated -->
+          </div>
         </div>
 
-        <!-- READINGS SECTION (Patients List for Readings) -->
-        <div id="section-readings" class="glass-card" style="display:none">
-          <div class="section-title mb-3">📊 Patient Readings & History</div>
-          <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px">Select a patient to view their complete history and clinical conditions.</p>
-          <div style="overflow-x:auto">
+        <!-- READINGS SECTION (hidden by default) -->
+        <div id="section-readings" class="glass-card"
+             style="display:none">
+          <div class="section-title mb-3"><img src="assets/img/lucid_monitor.png" style="width:24px; height:24px; vertical-align:middle; margin-right:8px"> Patients with Readings</div>
+          
+          <!-- Search Bar for Readings -->
+          <div class="admin-search-bar">
+            <input type="text" class="form-input"
+                   id="readingsSearchInput" style="flex:1"
+                   placeholder="Search by ID, Name, or Contact..."
+                   onkeydown="if(event.key==='Enter') executeSearch('readings')">
+            <button class="btn btn-primary" onclick="executeSearch('readings')">
+              <svg class="lucid-svg-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search
+            </button>
+          </div>
+
+          <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
                   <th>Patient ID</th>
                   <th>Name</th>
-                  <th>Contact</th>
+                  <th>Age</th>
                   <th>Gender</th>
                   <th>Total Readings</th>
-                  <th>Action</th>
+                  <th>Last Reading</th>
+                  <th style="text-align:center">Action</th>
                 </tr>
               </thead>
-              <tbody id="readingsPatientsTableBody">
+              <tbody id="readingsTableBody">
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Button -->
+          <div class="load-more-container" id="readingsLoadMore">
+            <!-- Dynamically populated -->
           </div>
         </div>
 
         <!-- DATABASE SECTION -->
-        <div id="section-database" class="glass-card" style="display:none">
-          <div class="section-title mb-3">💾 Database Tables</div>
+        <div id="section-database" class="glass-card"
+             style="display:none">
+          <div class="section-title mb-3"><img src="assets/img/lucid_database.png" style="width:24px; height:24px; vertical-align:middle; margin-right:8px"> Database Tables</div>
           <div id="dbTablesContent"></div>
         </div>
 
         <!-- SETTINGS SECTION -->
-        <div id="section-settings" class="glass-card" style="display:none">
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px">
-            <!-- Update Own Creds -->
-            <div style="border-right: 1px solid var(--border-glass); padding-right:30px">
-              <div class="section-title mb-3" style="font-size:18px">👤 My Account</div>
-              <div class="form-group">
-                <label class="form-label">New Admin Username</label>
-                <input type="text" class="form-input" id="newAdminUser" placeholder="New username">
-              </div>
-              <div class="form-group">
-                <label class="form-label">New Password</label>
-                <input type="password" class="form-input" id="newAdminPass" placeholder="New password">
-              </div>
-              <button class="btn btn-primary" onclick="updateCredentials()">Update My Access</button>
-            </div>
-
-            <!-- Add New Admin -->
-            <div>
-              <div class="section-title mb-3" style="font-size:18px">➕ Add New Admin</div>
-              <div class="form-group">
-                <label class="form-label">Admin Name</label>
-                <input type="text" class="form-input" id="addAdminName" placeholder="Admin username">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" class="form-input" id="addAdminPass" placeholder="Password">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Confirm Password</label>
-                <input type="password" class="form-input" id="addAdminConfirm" placeholder="Confirm password">
-              </div>
-              <button class="btn btn-outline" style="border-color:var(--cyan); color:var(--cyan)" onclick="submitAddAdmin()">Create Admin Account</button>
-            </div>
+        <div id="section-settings" class="glass-card"
+             style="display:none">
+          <div class="section-title mb-3"><svg class="lucid-svg" style="width:24px; height:24px; vertical-align:middle; margin-right:8px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</div>
+          <div class="form-group">
+            <label class="form-label">Admin Username</label>
+            <input type="text" class="form-input"
+                   id="newAdminUser" placeholder="New username">
           </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" class="form-input"
+                   id="newAdminPass" placeholder="New password">
+          </div>
+          <button class="btn btn-primary"
+                  onclick="updateCredentials()">
+            Save Changes
+          </button>
+
+          <div class="divider"></div>
+
+          <div class="section-title mb-3" style="font-size:20px"><svg class="lucid-svg" style="width:20px; height:20px; vertical-align:middle; margin-right:8px" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Add New Administrator</div>
+          <p style="font-size:13px; color:var(--text-secondary); margin-bottom:20px">Create a secondary administrative account for this platform.</p>
+          
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-input" id="regAdminUser" placeholder="New admin username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="regAdminPass" placeholder="Enter password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input type="password" class="form-input" id="regAdminConfirm" placeholder="Confirm password">
+          </div>
+          <button class="btn btn-primary" onclick="registerNewAdmin()">
+            <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Register Admin
+          </button>
         </div>
 
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- Row Detail Modal -->
-<div class="modal-overlay" id="rowDetailModal">
-  <div class="modal-box" style="max-width:600px">
-    <button class="modal-close" onclick="closeRowDetailModal()">✕</button>
-    <h2 class="section-title" id="rowDetailTitle" style="font-size:20px; margin-bottom:20px">📋 Record Details</h2>
-    <div id="rowDetailContent" style="display:grid; gap:10px"></div>
-    <div style="margin-top:30px; text-align:right">
-        <button class="btn btn-outline btn-sm" onclick="closeRowDetailModal()">Close View</button>
     </div>
   </div>
 </div>
@@ -469,7 +493,7 @@
              background:linear-gradient(135deg,#00b4d8,#0077b6);
              display:flex;align-items:center;justify-content:center;
              font-size:28px;box-shadow:0 0 20px rgba(0,180,216,0.3)"
-             id="modalAvatar">👤</div>
+             id="modalAvatar"><img src="assets/img/lucid_patient.png" class="lucid-icon" style="width:32px"></div>
         <div>
           <h2 style="font-size:22px;margin-bottom:4px"
               id="modalName">—</h2>
@@ -490,7 +514,7 @@
         <button class="btn btn-primary"
                 id="checkHistoryBtn"
                 onclick="loadPatientHistoryInModal()">
-          📋 Check Full History
+          <img src="assets/img/lucid_monitor.png" style="width:16px; height:16px; margin-right:8px; vertical-align:middle"> Check Full History
         </button>
       </div>
 
@@ -498,7 +522,7 @@
       <div id="modalHistoryArea" style="display:none">
         <div class="section-title" style="font-size:18px;
              margin-bottom:16px">
-          📊 Patient Health History
+          <img src="assets/img/lucid_monitor.png" style="width:20px; height:20px; margin-right:8px; vertical-align:middle"> Patient Health History
         </div>
         <div class="history-accordion" id="historyAccordion">
         </div>

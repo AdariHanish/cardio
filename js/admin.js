@@ -1,19 +1,24 @@
-﻿// =============================================================
-// CardioCare AI â€” Admin Dashboard
-// js/admin.js â€” Complete Final Version
+// =============================================================
+// CardioCare AI — Admin Dashboard
+// js/admin.js — Complete Final Version
 // =============================================================
 
 // =============================================================
 // GLOBAL STATE
 // =============================================================
 let allPatients = [];
+let activeReadingsPatients = [];
 let currentPatient = null;
 let currentTableName = null;
 let currentTablePage = 1;
 let currentSearch = '';
 let currentSortBy = 'id';
 let currentSortOrder = 'DESC';
-let searchTimeout = null;
+
+// Pagination State
+let patientsPage = 1;
+let readingsPage = 1;
+const PER_PAGE = 50;
 
 // =============================================================
 // ON PAGE LOAD
@@ -27,8 +32,11 @@ window.onload = function () {
 // LOAD ALL DATA
 // =============================================================
 async function loadAdminData() {
+    patientsPage = 1;
+    readingsPage = 1;
     await Promise.all([
-        loadPatients(),
+        loadPatients(true),
+        loadAllReadings(true),
         loadStats(),
     ]);
 }
@@ -51,136 +59,210 @@ async function loadStats() {
 // =============================================================
 // LOAD PATIENTS TABLE
 // =============================================================
-async function loadPatients() {
+/**
+ * EXECUTE SEARCH (Standard Trigger)
+ */
+async function executeSearch(type) {
+    if (type === 'patients') {
+        patientsPage = 1;
+        await loadPatients(true);
+    } else if (type === 'readings') {
+        readingsPage = 1;
+        await loadAllReadings(true);
+    }
+}
+
+/**
+ * LOAD PATIENTS (Paginated)
+ */
+async function loadPatients(isNewSearch = false) {
     const tbody = document.getElementById('patientsTableBody');
-    if (tbody) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9" style="text-align:center; padding:30px">
-                    <div class="spinner"></div>
-                    <div style="margin-top:12px; color:var(--text-secondary)">
-                        Loading patients...
-                    </div>
-                </td>
-            </tr>`;
+    const loadMoreContainer = document.getElementById('patientsLoadMore');
+    const query = document.getElementById('adminSearchInput')?.value || '';
+    const gender = document.getElementById('genderFilter')?.value || '';
+
+    if (isNewSearch && tbody) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px"><div class="spinner"></div></td></tr>`;
     }
 
-    const data = await api.get('/api/admin/patients');
-    
+    const data = await api.get(`/api/admin/patients?q=${encodeURIComponent(query)}&page=${patientsPage}`);
+
     if (data.success) {
-        allPatients = data.patients || [];
-        renderPatientsTable(allPatients);
-    } else {
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="9" style="text-align:center; color:var(--red); padding:30px">
-                        âŒ ${data.message || 'Failed to load patients'}
-                    </td>
-                </tr>`;
+        let patients = data.patients || [];
+        
+        // Frontend post-filtering for gender if needed (though we could move this to server too)
+        if (gender) {
+            patients = patients.filter(p => p.gender === gender);
         }
+
+        if (isNewSearch) {
+            allPatients = patients;
+            renderPatientsTable(patients);
+        } else {
+            allPatients = [...allPatients, ...patients];
+            appendPatientsTable(patients);
+        }
+
+        // Handle "Load More" button
+        if (data.total > allPatients.length) {
+            loadMoreContainer.innerHTML = `<button class="btn-load-more" onclick="loadMore('patients')"><svg class="lucid-svg-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> + Add More Patients</button>`;
+        } else {
+            loadMoreContainer.innerHTML = '';
+        }
+    } else {
+        showAlert('patientsTableBody', 'error', data.message || 'Error loading patients');
+    }
+}
+
+async function loadMore(type) {
+    if (type === 'patients') {
+        patientsPage++;
+        await loadPatients(false);
+    } else if (type === 'readings') {
+        readingsPage++;
+        await loadAllReadings(false);
     }
 }
 
 // =============================================================
 // RENDER PATIENTS TABLE
-// =============================================================
-function renderPatientsTable(patients) {
+// ===========================================================
+    function renderPatientsTable(patients) {
     const tbody = document.getElementById('patientsTableBody');
     if (!tbody) return;
 
     if (!patients || patients.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9" style="text-align:center;
-                    color:var(--text-muted);padding:40px">
-                    <div style="font-size:40px;
-                                margin-bottom:12px">ðŸ‘¥</div>
-                    No patients registered yet.
-                </td>
-            </tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px"> No patients found.</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = patients.map(p => `
-        <tr style="cursor:pointer"
-            onclick="openPatientModal('${p.patient_id}')">
-            <td class="text-cyan" style="font-weight:700">
-                ${p.patient_id || 'â€”'}
-            </td>
-            <td style="font-weight:600">
-                ${p.name || 'â€”'}
-            </td>
-            <td>${p.age || 'â€”'} yrs</td>
-            <td>${p.gender || 'â€”'}</td>
-            <td>${p.weight || 'â€”'} kg</td>
+    tbody.innerHTML = patients.map(p => buildPatientRow(p)).join('');
+    }
+
+function appendPatientsTable(patients) {
+    const tbody = document.getElementById('patientsTableBody');
+    if (!tbody) return;
+    tbody.insertAdjacentHTML('beforeend', patients.map(p => buildPatientRow(p)).join(''));
+}
+
+function buildPatientRow(p) {
+    return `
+        <tr style="cursor:pointer" onclick="openPatientModal('${p.patient_id}')">
+            <td class="text-cyan" style="font-weight:700">${p.patient_id || '—'}</td>
+            <td style="font-weight:600">${p.name || '—'}</td>
+            <td>${p.age || '—'} yrs</td>
+            <td>${p.gender || '—'}</td>
+            <td>${p.weight || '—'} kg</td>
+            <td><span class="badge badge-online" style="font-size:11px">${p.reading_count || 0} readings</span></td>
+            <td style="color:var(--text-secondary);font-size:12px">${formatTimestamp(p.last_visit) || 'No visits'}</td>
             <td>
-                <span class="badge badge-online"
-                      style="font-size:11px">
-                    ${p.reading_count || 0} readings
-                </span>
-            </td>
-            <td style="color:var(--text-secondary);
-                        font-size:12px">
-                ${formatTimestamp(p.last_visit) || 'No visits'}
-            </td>
-            <td>
-                <div style="display:flex;gap:6px"
-                     onclick="event.stopPropagation()">
-                    <button
-                        class="btn btn-outline btn-sm"
-                        onclick="openPatientModal(
-                            '${p.patient_id}'
-                        )"
-                        title="View patient details">
-                        ðŸ‘ View
-                    </button>
-                    <button
-                        class="btn btn-sm"
-                        style="background:rgba(255,68,68,0.15);
-                               color:var(--red);
-                               border:1px solid
-                               rgba(255,68,68,0.3)"
-                        onclick="confirmDeletePatient(
-                            '${p.patient_id}',
-                            '${escStr(p.name)}',
-                            ${p.reading_count || 0}
-                        )"
-                        title="Delete patient permanently">
-                        ðŸ—‘ Delete
+                <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
+                    <button class="btn btn-outline btn-sm" onclick="openPatientModal('${p.patient_id}')">View</button>
+                    <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3)"
+                        onclick="confirmDeletePatient('${p.patient_id}','${escStr(p.name)}',${p.reading_count || 0})">
+                        Delete
                     </button>
                 </div>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+}
+
+// =============================================================
+// LOAD ALL READINGS (Paginated)
+// =============================================================
+async function loadAllReadings(isNewSearch = false) {
+    const tbody = document.getElementById('readingsTableBody');
+    const loadMoreContainer = document.getElementById('readingsLoadMore');
+    const query = document.getElementById('readingsSearchInput')?.value || '';
+
+    if (isNewSearch && tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px"><div class="spinner"></div></td></tr>`;
+    }
+
+    const data = await api.get(`/api/admin/readings?q=${encodeURIComponent(query)}&page=${readingsPage}`);
+
+    if (data.success) {
+        const patients = data.patients || []; // Backend returns patients for the active readings view
+
+        if (isNewSearch) {
+            activeReadingsPatients = patients;
+            renderReadingsTable(patients);
+        } else {
+            activeReadingsPatients = [...activeReadingsPatients, ...patients];
+            appendReadingsTable(patients);
+        }
+
+        if (data.total > activeReadingsPatients.length) {
+            loadMoreContainer.innerHTML = `<button class="btn-load-more" onclick="loadMore('readings')"><svg class="lucid-svg-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> + Add More Records</button>`;
+        } else {
+            loadMoreContainer.innerHTML = '';
+        }
+    } else {
+        showAlert('readingsTableBody', 'error', data.message || 'Error loading readings');
+    }
+}
+
+function renderReadingsTable(patients) {
+    const tbody = document.getElementById('readingsTableBody');
+    if (!tbody) return;
+    if (!patients || patients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px"> No active readings found.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = patients.map(p => buildReadingRow(p)).join('');
+}
+
+function appendReadingsTable(patients) {
+    const tbody = document.getElementById('readingsTableBody');
+    if (!tbody) return;
+    tbody.insertAdjacentHTML('beforeend', patients.map(p => buildReadingRow(p)).join(''));
+}
+
+function buildReadingRow(p) {
+    return `
+        <tr style="cursor:pointer" onclick="openPatientModal('${p.patient_id}')">
+            <td class="text-cyan" style="font-weight:700">${p.patient_id}</td>
+            <td style="font-weight:600">${p.name}</td>
+            <td>${p.age} yrs</td>
+            <td>${p.gender}</td>
+            <td style="text-align:center">
+                <span class="badge badge-online">${p.reading_count} records</span>
+            </td>
+            <td style="color:var(--text-secondary);font-size:12px">
+                ${formatTimestamp(p.last_visit)}
+            </td>
+            <td style="text-align:center">
+                <button class="btn btn-primary btn-sm" onclick="openPatientModal('${p.patient_id}'); setTimeout(loadPatientHistoryInModal, 200)">
+                    View Readings
+                </button>
+            </td>
+        </tr>`;
 }
 
 // =============================================================
 // FILTER PATIENTS
 // =============================================================
 function filterPatients() {
-    const q = (document.getElementById('adminSearchInput')?.value || '').toLowerCase();
-    const gender = document.getElementById('genderFilter')?.value || '';
-    const ageRng = document.getElementById('ageFilter')?.value || '';
+    const q = (document.getElementById('adminSearchInput')
+        ?.value || '').toLowerCase();
+    const gender = document.getElementById('genderFilter')
+        ?.value || '';
+    const ageRng = document.getElementById('ageFilter')
+        ?.value || '';
 
     const filtered = allPatients.filter(p => {
-        // Broad Google-style search across multiple fields
-        const searchPool = [
-            p.name,
-            p.patient_id,
-            p.contact,
-            p.medical_history,
-            String(p.age),
-            p.gender
-        ].map(s => (s || '').toLowerCase()).join(' ');
+        const matchQ = !q ||
+            (p.name || '').toLowerCase().includes(q) ||
+            (p.patient_id || '').toLowerCase().includes(q) ||
+            String(p.age || '').includes(q);
 
-        const matchQ = !q || searchPool.includes(q);
         const matchG = !gender || p.gender === gender;
 
         let matchA = true;
         if (ageRng) {
             const [mn, mx] = ageRng.split('-').map(Number);
-            matchA = (p.age || 0) >= mn && (p.age || 0) <= mx;
+            matchA = (p.age || 0) >= mn &&
+                (p.age || 0) <= mx;
         }
 
         return matchQ && matchG && matchA;
@@ -207,27 +289,30 @@ async function openPatientModal(patientId) {
     if (histBtn) histBtn.style.display = 'block';
 
     // Avatar
-    setEl('modalAvatar',
-        patient.gender === 'Female' ? 'ðŸ‘©' : 'ðŸ‘¨'
-    );
-    setEl('modalName', patient.name || 'â€”');
+    setEl('modalAvatar', '');
+    const avatarEl = document.getElementById('modalAvatar');
+    if (avatarEl) {
+        avatarEl.innerHTML = `<img src="assets/img/lucid_patient.png" style="width:32px">`;
+    }
+
+    setEl('modalName', patient.name || '—');
     setEl('modalMeta',
-        `${patient.patient_id} â€¢ ` +
-        `${patient.age} years â€¢ ` +
+        `${patient.patient_id} • ` +
+        `${patient.age} years • ` +
         `${patient.gender}`
     );
 
     // Details grid
     const details = [
-        ['ðŸ†” Patient ID', patient.patient_id],
-        ['ðŸ‘¤ Full Name', patient.name],
-        ['ðŸŽ‚ Age', `${patient.age} years`],
-        ['âš–ï¸ Weight', `${patient.weight} kg`],
-        ['âš¤ Gender', patient.gender],
-        ['ðŸ“‹ Readings', patient.reading_count || 0],
-        ['ðŸ“… Registered',
+        ['<img src="assets/img/lucid_patient.png" style="width:12px; margin-right:4px"> Patient ID', patient.patient_id],
+        ['<svg class="lucid-svg" style="width:12px; height:12px; margin-right:4px" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Full Name', patient.name],
+        ['<svg class="lucid-svg" style="width:12px; height:12px; margin-right:4px" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Age', `${patient.age} years`],
+        ['<svg class="lucid-svg" style="width:12px; height:12px; margin-right:4px" viewBox="0 0 24 24"><path d="M11 12h2a2 2 0 1 0 0-4h-2v4z"/><path d="m15 18 3 3"/><path d="M15 18H9V4h4.14a2 2 0 1 1 0 4H9"/></svg> Weight', `${patient.weight} kg`],
+        ['<img src="assets/img/lucid_ai_brain.png" style="width:12px; margin-right:4px"> Gender', patient.gender],
+        ['<img src="assets/img/lucid_monitor.png" style="width:12px; margin-right:4px"> Readings', patient.reading_count || 0],
+        ['<svg class="lucid-svg" style="width:12px; height:12px; margin-right:4px" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Registered',
             formatTimestamp(patient.registered_on)],
-        ['ðŸ¥ History',
+        ['<svg class="lucid-svg" style="width:12px; height:12px; margin-right:4px" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> History',
             patient.medical_history || 'None recorded'],
     ];
 
@@ -244,7 +329,7 @@ async function openPatientModal(patientId) {
                              margin-bottom:4px">${k}</div>
                 <div style="font-size:14px;
                              font-weight:500">
-                    ${v || 'â€”'}
+                    ${v || '—'}
                 </div>
             </div>
         `).join('');
@@ -291,7 +376,8 @@ async function loadPatientHistoryInModal() {
     if (!data.success) {
         accordion.innerHTML = `
             <div style="color:var(--red); text-align:center; padding:20px">
-                âŒ ${data.message || 'Failed to load history'}
+                <svg class="lucid-svg" style="width:24px; height:24px; margin-bottom:8px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><br>
+                ${data.message || 'Failed to load history'}
             </div>`;
         return;
     }
@@ -299,7 +385,7 @@ async function loadPatientHistoryInModal() {
     if (readings.length === 0) {
         accordion.innerHTML = `
             <div style="text-align:center;padding:40px; color:var(--text-muted)">
-                <div style="font-size:36px; margin-bottom:12px">ðŸ“­</div>
+                <img src="assets/img/lucid_search.png" style="width:40px; opacity:0.3; margin-bottom:12px"><br>
                 No readings recorded yet for this patient.
             </div>`;
         return;
@@ -323,44 +409,45 @@ async function loadPatientHistoryInModal() {
                     </span>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px">
-                    <span class="badge ${maxR > 70 ? 'badge-offline' : 'badge-online'}" style="font-size:11px">
                         Max: ${maxR.toFixed(0)}%
                     </span>
-                    <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 10px; font-size:11px"
-                        onclick="event.stopPropagation(); confirmDeleteReading(${r.id}, ${i + 1})" title="Delete this reading">ðŸ—‘</button>
-                    <span style="color:var(--text-muted)">â–¼</span>
+                    <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 8px; display:flex; align-items:center"
+                        onclick="event.stopPropagation(); confirmDeleteReading(${r.id}, ${i + 1})" title="Delete this reading">
+                        <svg class="lucid-svg" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                    <span style="color:var(--text-muted); font-size:10px">▼</span>
                 </div>
             </div>
             <div class="accordion-body">
                 <div class="risk-grid-mini">
-                    ${buildMiniRisk('ðŸ”´ Arrhythmia', r.arrhythmia_risk || 0)}
-                    ${buildMiniRisk('â¤ï¸ Heart Attack', r.heartattack_risk || 0)}
-                    ${buildMiniRisk('ðŸ§  Stroke Risk', r.stroke_risk || 0)}
-                    ${buildMiniRisk('ðŸ’Š Hypertension', r.hypertension_risk || 0)}
+                    ${buildMiniRisk('Arrhythmia', r.arrhythmia_risk || 0)}
+                    ${buildMiniRisk('Heart Attack', r.heartattack_risk || 0)}
+                    ${buildMiniRisk('Stroke Risk', r.stroke_risk || 0)}
+                    ${buildMiniRisk('Hypertension', r.hypertension_risk || 0)}
                 </div>
                 <div style="display:flex;gap:20px; font-size:13px; color:var(--text-secondary); flex-wrap:wrap; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); margin-top:10px">
-                    <span>â¤ï¸ HR: ${r.heart_rate || '--'} bpm</span>
-                    <span>ðŸ« SpO2: ${r.spo2 || '--'}%</span>
-                    <span>ðŸ©¸ BP: ${r.sbp || '--'}/${r.dbp || '--'} mmHg</span>
-                    <span>â± PTT: ${r.ptt_ms || '--'} ms</span>
+                    <span><img src="assets/img/lucid_heart.png" style="width:14px; vertical-align:middle; margin-right:4px"> HR: ${r.heart_rate || '--'} bpm</span>
+                    <span><img src="assets/img/lucid_monitor.png" style="width:14px; vertical-align:middle; margin-right:4px"> SpO2: ${r.spo2 || '--'}%</span>
+                    <span><img src="assets/img/lucid_monitor.png" style="width:14px; vertical-align:middle; margin-right:4px"> BP: ${r.sbp || '--'}/${r.dbp || '--'} mmHg</span>
+                    <span><svg class="lucid-svg" style="width:14px; height:14px; vertical-align:middle; margin-right:4px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> PTT: ${r.ptt_ms || '--'} ms</span>
                 </div>
-                ${r.future_risk ? `<div style="margin-top:12px; padding:10px 14px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.15); border-radius:8px; font-size:13px; color:var(--text-secondary)">ðŸ”® <strong>Future Prediction:</strong> ${r.future_risk}</div>` : ''}
-                ${r.overall_condition ? `<div style="margin-top:10px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; ${getConditionStyle(r.overall_condition)}">ðŸ“‹ ${r.overall_condition}</div>` : ''}
+                ${r.future_risk ? `<div style="margin-top:12px; padding:10px 14px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.15); border-radius:8px; font-size:13px; color:var(--text-secondary)"><img src="assets/img/lucid_ai_brain.png" style="width:16px; margin-right:8px; vertical-align:middle"> <strong>Future Prediction:</strong> ${r.future_risk}</div>` : ''}
+                ${r.overall_condition ? `<div style="margin-top:10px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; ${getConditionStyle(r.overall_condition)}"><img src="assets/img/lucid_monitor.png" style="width:16px; margin-right:8px; vertical-align:middle"> ${r.overall_condition}</div>` : ''}
             </div>
         </div>`;
     }).join('');
 }
 
 // =============================================================
-// DELETE PATIENT â€” Confirmation
+// DELETE PATIENT — Confirmation
 // =============================================================
 function confirmDeletePatient(patientId, patientName,
     readingCount) {
     const html = `
         <div style="text-align:center;padding:10px">
 
-            <div style="font-size:60px;margin-bottom:16px">
-                âš ï¸
+            <div style="margin-bottom:16px">
+                <svg class="lucid-svg" style="width:60px; height:60px" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
 
             <h2 style="color:var(--red);
@@ -418,7 +505,7 @@ function confirmDeletePatient(patientId, patientName,
                          margin-bottom:24px;
                          font-size:13px;
                          color:var(--orange)">
-                âš ï¸ This action is
+                ⚠️ This action is
                 <strong>permanent</strong>
                 and cannot be undone.
                 All health readings will also be deleted.
@@ -428,7 +515,7 @@ function confirmDeletePatient(patientId, patientName,
                 <button class="btn btn-outline"
                         style="flex:1"
                         onclick="closeDeleteModal()">
-                    âœ• Cancel
+                    <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel
                 </button>
                 <button
                     class="btn"
@@ -441,7 +528,7 @@ function confirmDeletePatient(patientId, patientName,
                     onclick="executeDeletePatient(
                         '${patientId}'
                     )">
-                    ðŸ—‘ Yes, Delete Permanently
+                    <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Yes, Delete Permanently
                 </button>
             </div>
         </div>
@@ -451,7 +538,7 @@ function confirmDeletePatient(patientId, patientName,
 }
 
 // =============================================================
-// DELETE PATIENT â€” Execute
+// DELETE PATIENT — Execute
 // =============================================================
 async function executeDeletePatient(patientId) {
     const modalBox = document.querySelector('#deleteModal .modal-box');
@@ -472,14 +559,14 @@ async function executeDeletePatient(patientId) {
 }
 
 // =============================================================
-// DELETE SINGLE READING â€” Confirmation
+// DELETE SINGLE READING — Confirmation
 // =============================================================
 function confirmDeleteReading(readingId, readingNumber) {
     const html = `
         <div style="text-align:center;padding:10px">
 
             <div style="font-size:50px;margin-bottom:16px">
-                ðŸ—‘ï¸
+                🗑️
             </div>
 
             <h3 style="color:var(--red);margin-bottom:12px">
@@ -500,7 +587,7 @@ function confirmDeleteReading(readingId, readingNumber) {
                 <button class="btn btn-outline"
                         style="flex:1"
                         onclick="closeDeleteModal()">
-                    âœ• Cancel
+                    <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel
                 </button>
                 <button
                     class="btn"
@@ -511,7 +598,7 @@ function confirmDeleteReading(readingId, readingNumber) {
                     onclick="executeDeleteReading(
                         ${readingId}
                     )">
-                    ðŸ—‘ Delete Reading
+                    <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Delete Reading
                 </button>
             </div>
         </div>
@@ -521,7 +608,7 @@ function confirmDeleteReading(readingId, readingNumber) {
 }
 
 // =============================================================
-// DELETE READING â€” Execute
+// DELETE READING — Execute
 // =============================================================
 async function executeDeleteReading(readingId) {
     const modalBox = document.querySelector('#deleteModal .modal-box');
@@ -554,14 +641,18 @@ async function loadDbTables() {
     const data = await api.get('/api/admin/db/tables');
 
     if (!data.success) {
-        container.innerHTML = `<div class="alert alert-error">âŒ ${data.message || 'Failed to load tables'}</div>`;
+        container.innerHTML = `<div class="alert alert-error"><svg class="lucid-svg" style="width:16px; height:16px; margin-right:8px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${data.message || 'Failed to load tables'}</div>`;
         return;
     }
 
-    let html = `<div style="display:grid;gap:16px; margin-bottom:24px">`;
+    let html = `<div style="display:grid;gap:16px; margin-bottom:24px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">`;
     data.tables.forEach(table => {
         const colList = table.columns.map(c => c.name).join(', ');
-        const icon = table.table_name === 'patients' ? 'ðŸ‘¥' : table.table_name === 'readings' ? 'ðŸ“Š' : table.table_name === 'admin' ? 'ðŸ›¡ï¸' : 'ðŸ“‹';
+        let iconHtml = `<img src="assets/img/lucid_database.png" style="width:24px">`;
+        if (table.table_name === 'patients') iconHtml = `<img src="assets/img/lucid_patient.png" style="width:24px">`;
+        if (table.table_name === 'readings') iconHtml = `<img src="assets/img/lucid_monitor.png" style="width:24px">`;
+        if (table.table_name === 'admin') iconHtml = `<img src="assets/img/lucid_ai_brain.png" style="width:24px">`;
+        
         const isActive = table.table_name === currentTableName;
 
         html += `
@@ -569,7 +660,7 @@ async function loadDbTables() {
              onclick="loadTableData('${table.table_name}', 1)" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='${isActive ? 'var(--cyan)' : 'var(--border-glass)'}'">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
                 <div style="display:flex; align-items:center; gap:10px">
-                    <span style="font-size:24px">${icon}</span>
+                    ${iconHtml}
                     <div>
                         <div style="font-weight:700; font-size:16px; color:var(--cyan)">${table.table_name}</div>
                         <div style="font-size:11px; color:var(--text-muted)">${table.columns.length} columns</div>
@@ -578,7 +669,7 @@ async function loadDbTables() {
                 <span class="badge badge-online" style="font-size:12px">${table.row_count} rows</span>
             </div>
             <div style="font-size:12px; color:var(--text-secondary); line-height:1.8; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:10px">${colList}</div>
-            <div style="text-align:center; font-size:12px; color:var(--cyan)">Click to view data â†’</div>
+            <div style="text-align:center; font-size:12px; color:var(--cyan)">Click to view data →</div>
         </div>`;
     });
 
@@ -613,11 +704,10 @@ async function loadTableData(tableName, page) {
     const data = await api.get(`/api/admin/db/tables/${tableName}?${params}`);
 
     if (!data.success) {
-        viewer.innerHTML = `<div class="alert alert-error">âŒ ${data.message || 'Failed to load data'}</div>`;
+        viewer.innerHTML = `<div class="alert alert-error"><svg class="lucid-svg" style="width:16px; height:16px; margin-right:8px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${data.message || 'Failed to load data'}</div>`;
         return;
     }
 
-    currentTableData = data.rows || []; // Cache for Detail View
     renderTableData(data, viewer);
 }
 
@@ -632,7 +722,7 @@ function renderTableData(data, viewer) {
 
     const isProtected = table_name === 'admin';
 
-    // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Header ────────────────────────────────────────────────
     let html = `
     <div style="background:var(--bg-card);
                  backdrop-filter:blur(20px);
@@ -655,8 +745,8 @@ function renderTableData(data, viewer) {
                              display:flex;
                              align-items:center;
                              gap:8px">
-                    ${table_name === 'patients' ? 'ðŸ‘¥' :
-            table_name === 'readings' ? 'ðŸ“Š' : 'ðŸ›¡ï¸'}
+                    ${table_name === 'patients' ? '<img src="assets/img/lucid_patient.png" style="width:20px">' :
+            table_name === 'readings' ? '<img src="assets/img/lucid_monitor.png" style="width:20px">' : '<img src="assets/img/lucid_database.png" style="width:20px">' }
                     ${table_name}
                     <span class="badge badge-online"
                           style="font-size:11px">
@@ -667,7 +757,7 @@ function renderTableData(data, viewer) {
                              color:var(--text-muted);
                              margin-top:4px">
                     Page ${page} of ${total_pages}
-                    Â· Showing ${rows.length} of ${total_rows} rows
+                    · Showing ${rows.length} of ${total_rows} rows
                 </div>
             </div>
 
@@ -681,22 +771,22 @@ function renderTableData(data, viewer) {
                        style="width:220px;
                                padding:10px 14px;
                                font-size:13px"
-                       placeholder="ðŸ” Search ${table_name}..."
+                       placeholder="Search ${table_name}..."
                        value="${escStr(currentSearch)}"
                        oninput="debounceTableSearch(
                            this.value, '${table_name}'
                        )">
                 <button class="btn btn-outline btn-sm"
                         onclick="closeTableViewer()">
-                    âœ• Close
+                    <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Close
                 </button>
             </div>
         </div>
 
         <!-- DATA TABLE -->
-        <div style="table-responsive;
+        <div style="overflow-x:auto;
                      max-height:550px;
-                     ">
+                     overflow-y:auto">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -706,7 +796,7 @@ function renderTableData(data, viewer) {
     columns.forEach(col => {
         const isSorted = col === currentSortBy;
         const arrow = isSorted
-            ? (currentSortOrder === 'ASC' ? ' â†‘' : ' â†“')
+            ? (currentSortOrder === 'ASC' ? ' ↑' : ' ↓')
             : '';
         const nextOrder = (isSorted &&
             currentSortOrder === 'DESC')
@@ -728,11 +818,12 @@ function renderTableData(data, viewer) {
             </th>`;
     });
 
-        // Action Column
+    if (!isProtected) {
         html += `
-            <th style="width:120px;text-align:center">
-                Actions
+            <th style="width:80px;text-align:center">
+                Delete
             </th>`;
+    }
 
     html += `
                     </tr>
@@ -740,7 +831,7 @@ function renderTableData(data, viewer) {
                 <tbody>
     `;
 
-    // â”€â”€ Rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Rows ──────────────────────────────────────────────────
     if (rows.length === 0) {
         const colspan = columns.length + (isProtected ? 0 : 1);
         html += `
@@ -749,8 +840,9 @@ function renderTableData(data, viewer) {
                     style="text-align:center;
                             padding:40px;
                             color:var(--text-muted)">
-                    <div style="font-size:30px;
-                                 margin-bottom:10px">ðŸ“­</div>
+                    <div style="margin-bottom:10px">
+                        <img src="assets/img/lucid_search.png" style="width:40px; opacity:0.3">
+                    </div>
                     ${currentSearch
                 ? `No results for "${currentSearch}"`
                 : 'Table is empty'}
@@ -785,9 +877,14 @@ function renderTableData(data, viewer) {
                         'white-space:nowrap';
                 } else if (col === 'password' ||
                     col === 'token') {
-                    display = 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
+                    display = `<span class="sensitive-value" data-raw="••••••••">••••••••</span>
+                               <button class="btn btn-sm" 
+                                       style="padding: 2px 6px; font-size: 10px; margin-left: 8px;"
+                                       onmousedown="revealValue('${table_name}', ${row.id}, '${col}', this)"
+                                       onmouseup="maskValue(this)"
+                                       onmouseleave="maskValue(this)">👁</button>`;
                     style = 'color:var(--text-muted);' +
-                        'letter-spacing:2px';
+                        'letter-spacing:1px; white-space:nowrap';
                 } else if (typeof val === 'string' &&
                     val.length > 40) {
                     display = `<span title="${escStr(val)}">
@@ -804,18 +901,7 @@ function renderTableData(data, viewer) {
                     </td>`;
             });
 
-            // Action buttons
-            html += `
-                <td style="text-align:center">
-                    <div style="display:flex;gap:6px;justify-content:center">
-                        <button
-                            class="btn btn-outline btn-sm"
-                            style="padding:5px 10px; font-size:12px"
-                            onclick="showRowDetail('${table_name}', ${row.id})"
-                            title="View full details">
-                            ðŸ‘
-                        </button>`;
-
+            // Delete button
             if (!isProtected) {
                 const displayName =
                     row.patient_id ||
@@ -828,14 +914,15 @@ function renderTableData(data, viewer) {
                         : 'reading';
 
                 html += `
+                    <td style="text-align:center">
                         <button
                             class="btn btn-sm"
                             style="background:rgba(255,68,68,0.1);
                                    color:var(--red);
                                    border:1px solid
                                    rgba(255,68,68,0.25);
-                                   padding:5px 10px;
-                                   font-size:12px"
+                                   padding:4px 8px;
+                                   display:flex; align-items:center; justify-content:center"
                             onclick="confirmDeleteRow(
                                 '${table_name}',
                                 ${row.id},
@@ -843,10 +930,11 @@ function renderTableData(data, viewer) {
                                 '${rowType}'
                             )"
                             title="Delete row ${row.id}">
-                            ðŸ—‘
-                        </button>`;
+                            <svg class="lucid-svg" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </td>`;
             }
-            html += `</div></td>`;
+
             html += '</tr>';
         });
     }
@@ -857,7 +945,7 @@ function renderTableData(data, viewer) {
         </div>
     `;
 
-    // â”€â”€ Pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Pagination ────────────────────────────────────────────
     if (total_pages > 1) {
         html += `
             <div style="display:flex;
@@ -874,7 +962,7 @@ function renderTableData(data, viewer) {
                         onclick="loadTableData(
                             '${table_name}', ${page - 1}
                         )">
-                    â† Prev
+                    ← Prev
                 </button>`;
         }
 
@@ -909,7 +997,7 @@ function renderTableData(data, viewer) {
                         onclick="loadTableData(
                             '${table_name}', ${page + 1}
                         )">
-                    Next â†’
+                    Next →
                 </button>`;
         }
 
@@ -963,7 +1051,6 @@ function closeTableViewer() {
     currentSearch = '';
     currentSortBy = 'id';
     currentSortOrder = 'DESC';
-    loadDbTables();
 }
 
 // =============================================================
@@ -975,7 +1062,7 @@ function confirmDeleteRow(tableName, rowId,
         <div style="text-align:center;padding:10px">
 
             <div style="font-size:50px;margin-bottom:16px">
-                ðŸ—‘ï¸
+                🗑️
             </div>
 
             <h3 style="color:var(--red);margin-bottom:12px">
@@ -1024,7 +1111,7 @@ function confirmDeleteRow(tableName, rowId,
                          margin-bottom:20px;
                          font-size:13px;
                          color:var(--orange)">
-                âš ï¸ Deleting a patient will also permanently
+                ⚠️ Deleting a patient will also permanently
                 delete <strong>ALL their readings</strong>
             </div>` : ''}
 
@@ -1032,7 +1119,7 @@ function confirmDeleteRow(tableName, rowId,
                 <button class="btn btn-outline"
                         style="flex:1"
                         onclick="closeDeleteModal()">
-                    âœ• Cancel
+                    ✕ Cancel
                 </button>
                 <button
                     class="btn"
@@ -1043,7 +1130,7 @@ function confirmDeleteRow(tableName, rowId,
                     onclick="executeDeleteRow(
                         '${tableName}', ${rowId}
                     )">
-                    ðŸ—‘ Delete
+                    <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Delete
                 </button>
             </div>
         </div>
@@ -1112,7 +1199,7 @@ function showSection(name) {
     document.querySelectorAll('.sidebar-menu a')
         .forEach(a => a.classList.remove('active'));
 
-    if (name === 'readings') loadAllReadings();
+    if (name === 'readings') loadAllReadings(true);
     if (name === 'database') {
         currentTableName = null;
         loadDbTables();
@@ -1120,60 +1207,136 @@ function showSection(name) {
 }
 
 async function loadAllReadings() {
-    const tbody = document.getElementById('readingsPatientsTableBody');
+    const tbody = document.getElementById('readingsTableBody');
     if (!tbody) return;
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="6" style="text-align:center; padding:20px">
+            <td colspan="7" style="text-align:center; padding:20px">
                 <div class="spinner"></div>
             </td>
         </tr>`;
 
     try {
         const data = await api.get('/api/admin/patients');
-        const patients = data.patients || [];
+        const allStats = data.patients || [];
+        // Filter: only patients who have at least one reading
+        activeReadingsPatients = allStats.filter(p => (p.reading_count || 0) > 0);
 
-        if (patients.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted)">
-                        No patients found to view readings for.
-                    </td>
-                </tr>`;
-            return;
-        }
-
-        tbody.innerHTML = patients.map(p => `
-            <tr>
-                <td class="text-cyan" style="font-weight:700">${p.patient_id}</td>
-                <td style="font-weight:600">${p.name}</td>
-                <td style="font-size:13px; color:var(--text-secondary)">${p.contact || 'No contact'}</td>
-                <td>${p.gender}</td>
-                <td>
-                    <span class="badge ${p.reading_count > 0 ? 'badge-online' : 'badge-offline'}">
-                        ${p.reading_count || 0} readings
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-primary btn-sm" onclick="viewPatientHistoryFromReadings('${p.patient_id}')">
-                        ðŸ“‹ View Readings
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+        renderReadingsTable(activeReadingsPatients);
 
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--red); padding:20px">âŒ Failed to load patient list</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--red); padding:20px"><svg class="lucid-svg" style="width:24px; height:24px; margin-bottom:8px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><br>Failed to load active patients</td></tr>`;
     }
 }
 
-function viewPatientHistoryFromReadings(pid) {
-    // We reuse the existing modal logic since it is already perfect for viewing history
-    openPatientModal(pid);
-    setTimeout(() => {
-        loadPatientHistoryInModal();
-    }, 300);
+function filterReadingsPatients() {
+    const q = (document.getElementById('readingsSearchInput')?.value || '').toLowerCase();
+    
+    const filtered = activeReadingsPatients.filter(p => {
+        return (p.name || '').toLowerCase().includes(q) ||
+               (p.patient_id || '').toLowerCase().includes(q) ||
+               (p.contact || '').toLowerCase().includes(q);
+    });
+
+    renderReadingsTable(filtered);
+}
+
+function renderReadingsTable(patients) {
+    const tbody = document.getElementById('readingsTableBody');
+    if (!tbody) return;
+
+    if (patients.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted)">
+                    <img src="assets/img/lucid_search.png" style="width:40px; opacity:0.3; margin-bottom:12px"><br>
+                    No matching patients found.
+                </td>
+            </tr>`;
+        return;
+    }
+
+    tbody.innerHTML = patients.map(p => `
+        <tr>
+            <td class="text-cyan" style="font-weight:700">${p.patient_id}</td>
+            <td style="font-weight:600">${p.name}</td>
+            <td>${p.age} yrs</td>
+            <td>${p.gender}</td>
+            <td>
+                <span class="badge badge-online" style="font-size:11px">
+                    ${p.reading_count} readings
+                </span>
+            </td>
+            <td style="font-size:12px; color:var(--text-secondary)">
+                ${formatTimestamp(p.last_visit)}
+            </td>
+            <td style="text-align:center">
+                <button class="btn btn-outline btn-sm" 
+                        onclick="openPatientModal('${p.patient_id}'); setTimeout(() => loadPatientHistoryInModal(), 100);">
+                    <img src="assets/img/lucid_monitor.png" style="width:14px; margin-right:4px; vertical-align:middle"> View Readings
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function registerNewAdmin() {
+    const user = (document.getElementById('regAdminUser')?.value || '').trim();
+    const pass = document.getElementById('regAdminPass')?.value || '';
+    const conf = document.getElementById('regAdminConfirm')?.value || '';
+
+    if (!user || !pass) {
+        alert('Please fill in all fields.');
+        return;
+    }
+    if (pass !== conf) {
+        alert('Passwords do not match.');
+        return;
+    }
+
+    try {
+        const data = await api.post('/api/admin/register', { username: user, password: pass });
+        if (data.success) {
+            alert('Success: ' + data.message);
+            document.getElementById('regAdminUser').value = '';
+            document.getElementById('regAdminPass').value = '';
+            document.getElementById('regAdminConfirm').value = '';
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        alert('Registration failed. Try again.');
+    }
+}
+
+async function revealValue(table, id, col, btn) {
+    const span = btn.previousElementSibling;
+    if (!span) return;
+
+    // Track press state to prevent race conditions
+    btn.isPressed = true;
+
+    try {
+        const data = await api.get(`/api/admin/db/reveal?table=${table}&id=${id}&column=${col}`);
+        // Only reveal if the user is STILL holding the button
+        if (data.success && btn.isPressed) {
+            span.textContent = data.value;
+            span.style.letterSpacing = 'normal';
+            span.style.color = 'var(--cyan)';
+        }
+    } catch (e) {
+        console.error('Reveal failed:', e);
+    }
+}
+
+function maskValue(btn) {
+    btn.isPressed = false;
+    const span = btn.previousElementSibling;
+    if (!span) return;
+    span.textContent = '••••••••';
+    span.style.letterSpacing = '1px';
+    span.style.color = 'var(--text-muted)';
 }
 
 // =============================================================
@@ -1205,49 +1368,15 @@ async function updateCredentials() {
         });
 
         if (data.success) {
-            alert('âœ… Credentials updated successfully!\nPlease log in again with new credentials.');
+            alert('Success: Credentials updated successfully!\n' +
+                'Please log in again with new credentials.');
             adminLogout();
         } else {
-            alert(`âŒ Failed to update credentials: ${data.message || 'Unknown error'}`);
+            alert(`Error: Failed to update credentials: ${data.message || 'Unknown error'}`);
         }
 
     } catch (e) {
-        alert('âŒ Connection error. Try again.');
-    }
-}
-
-async function submitAddAdmin() {
-    const name = document.getElementById('addAdminName')?.value.trim();
-    const pass = document.getElementById('addAdminPass')?.value;
-    const conf = document.getElementById('addAdminConfirm')?.value;
-
-    if (!name || !pass || !conf) {
-        alert('All fields are required.');
-        return;
-    }
-
-    if (pass !== conf) {
-        alert('Passwords do not match!');
-        return;
-    }
-
-    try {
-        const data = await api.post('/api/admin/add-admin', {
-            username: name,
-            password: pass
-        });
-
-        if (data.success) {
-            alert(`âœ… Admin "${name}" created successfully!`);
-            document.getElementById('addAdminName').value = '';
-            document.getElementById('addAdminPass').value = '';
-            document.getElementById('addAdminConfirm').value = '';
-            loadDbTables(); // Refresh table counts
-        } else {
-            alert(`âŒ Failed: ${data.message}`);
-        }
-    } catch (e) {
-        alert('âŒ Connection error adding admin.');
+        alert('Error: Connection error. Try again.');
     }
 }
 
@@ -1300,8 +1429,9 @@ function showModalSuccess(box, title, message) {
     if (!box) return;
     box.innerHTML = `
         <div style="text-align:center;padding:40px">
-            <div style="font-size:56px;
-                         margin-bottom:16px">âœ…</div>
+            <div style="margin-bottom:16px">
+                <svg class="lucid-svg" style="width:56px; height:56px" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
             <h3 style="color:var(--green);
                         margin-bottom:10px">
                 ${title}
@@ -1318,8 +1448,9 @@ function showModalError(box, message) {
     if (!box) return;
     box.innerHTML = `
         <div style="text-align:center;padding:40px">
-            <div style="font-size:56px;
-                         margin-bottom:16px">âŒ</div>
+            <div style="margin-bottom:16px">
+                <svg class="lucid-svg" style="width:56px; height:56px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
             <h3 style="color:var(--red);
                         margin-bottom:10px">
                 Failed
@@ -1408,58 +1539,4 @@ function getConditionStyle(condition) {
     return 'background:rgba(0,230,118,0.1);' +
         'border:1px solid rgba(0,230,118,0.2);' +
         'color:var(--green)';
-}
-
-// =============================================================
-// ROW DETAIL VIEW (Database Tables)
-// =============================================================
-let currentTableData = null; // Cache last loaded table rows
-
-function showRowDetail(tableName, rowId) {
-    // In a real app we'd fetch specific ID or use cache
-    // For now, search in DOM or refetch. Since we just rendered the table, 
-    // we can use a simpler approach: finding the row in the viewer's data
-    // But since `renderTableData` doesn't save to global yet, let's just use currentTableData if available
-    
-    // Actually, it's better to refetch specific record or pass it as JSON to the button
-    // I will modify the loop to pass the row index
-    // Wait, let's keep it simple: fetch all data for that specific ID or find in global
-    // I'll modify `renderTableData` slightly to cache the rows
-    
-    const row = currentTableData.find(r => r.id === rowId);
-    if (!row) return;
-
-    const modal = document.getElementById('rowDetailModal');
-    const content = document.getElementById('rowDetailContent');
-    const title = document.getElementById('rowDetailTitle');
-    
-    title.textContent = `ðŸ“‹ Record: ${tableName} #${rowId}`;
-    
-    let html = '';
-    for (const [key, val] of Object.entries(row)) {
-        let displayVal = val;
-        let isSensitive = (key === 'password' || key === 'token');
-        
-        if (val === null) displayVal = 'NULL';
-        else if (isSensitive) {
-            // Here we show the actual value (unmasked) for official admin view
-            // as requested "add view option to the details when opened in website"
-            displayVal = `<span style="color:var(--cyan); word-break:break-all">${val}</span>`;
-        }
-
-        html += `
-            <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid rgba(255,255,255,0.06)">
-                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px">${key}</div>
-                <div style="font-size:14px; color:white; font-family:monospace">${displayVal}</div>
-            </div>
-        `;
-    }
-    
-    content.innerHTML = html;
-    modal.classList.add('show');
-}
-
-function closeRowDetailModal() {
-    const modal = document.getElementById('rowDetailModal');
-    if (modal) modal.classList.remove('show');
 }

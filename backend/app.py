@@ -102,19 +102,29 @@ def register_patient():
 @app.route('/api/patients/search')
 def search_patient():
     q = request.args.get('q', '').strip()
+    page = int(request.args.get('page', 1))
+    
     if not q:
         return jsonify({"success": False, "message": "Search query empty"}), 400
         
     try:
-        patients = db.search_patient(q)
-        if not patients:
-            return jsonify({"success": False, "message": "No patients found matching that term."}), 404
-            
-        # We now return the list of matching patients. 
-        # The frontend will decide if it needs to fetch specific readings for a single match.
+        # returns {success, patients, total}
+        result = db.search_patients(q, page=page, per_page=10)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/patients/<pid>')
+def get_patient(pid):
+    try:
+        patient = db.get_patient_by_id(pid)
+        if not patient:
+            return jsonify({"success": False, "message": "Patient not found"}), 404
+        readings = db.get_patient_readings(pid)
         return jsonify({
             "success": True,
-            "patients": patients
+            "patient": patient,
+            "readings": readings
         })
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
@@ -156,7 +166,10 @@ def admin_patients():
     token = request.headers.get('X-Admin-Token', '')
     if not db.verify_token(token):
         return jsonify({"error": "Unauthorized"}), 401
-    return jsonify({"success": True, "patients": db.get_all_patients()})
+    
+    q = request.args.get('q', '').strip()
+    page = int(request.args.get('page', 1))
+    return jsonify(db.get_all_patients(query=q, page=page))
 
 @app.route('/api/admin/readings')
 def admin_readings():
@@ -167,7 +180,10 @@ def admin_readings():
     pid = request.args.get('patient_id')
     if pid:
         return jsonify({"success": True, "readings": db.get_patient_readings(pid)})
-    return jsonify({"success": True, "readings": db.get_all_readings()})
+    
+    q = request.args.get('q', '').strip()
+    page = int(request.args.get('page', 1))
+    return jsonify(db.get_active_patients(query=q, page=page))
 
 @app.route('/api/admin/db/tables')
 def admin_tables():
@@ -214,20 +230,38 @@ def admin_delete_reading(rid):
     token = request.headers.get('X-Admin-Token', '')
     return jsonify(db.delete_reading(rid, token))
 
-@app.route('/api/admin/add-admin', methods=['POST'])
-def admin_add_new():
+@app.route('/api/admin/register', methods=['POST'])
+def admin_register():
     token = request.headers.get('X-Admin-Token', '')
     if not db.verify_token(token):
-        return jsonify({"success": False, "message": "Unauthorized"}), 401
+        return jsonify({"error": "Unauthorized"}), 401
     
     data = request.json or {}
     username = data.get('username')
     password = data.get('password')
     
     if not username or not password:
-        return jsonify({"success": False, "message": "Username and password required"}), 400
+        return jsonify({"success": False, "message": "Missing username or password"}), 400
         
-    return jsonify(db.register_admin(username, password))
+    return jsonify(db.add_admin(username, password))
+
+@app.route('/api/admin/db/reveal')
+def admin_reveal():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    table = request.args.get('table')
+    row_id = request.args.get('id')
+    col = request.args.get('column')
+    
+    if not table or not row_id or not col:
+        return jsonify({"success": False, "message": "Missing parameters"}), 400
+        
+    val = db.get_raw_value(table, row_id, col)
+    if val is not None:
+        return jsonify({"success": True, "value": val})
+    return jsonify({"success": False, "message": "Value not found or forbidden"}), 404
 
 # =============================================================
 # ── SECTION 4: MONITOR & IOT ─────────────────────────────────

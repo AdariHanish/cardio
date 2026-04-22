@@ -142,4 +142,59 @@ function adminLogout() {
 function setEl(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
-}
+}
+
+// ── GLOBAL SEARCH & MOBILE NAV ───────────────────────────
+
+function toggleMobileMenu() {
+  const menu = document.getElementById('navbarMenu');
+  if (menu) menu.classList.toggle('show');
+}
+
+/**
+ * Global Search execution from navbar
+ */
+async function executeGlobalSearch() {
+  const input = document.getElementById('globalSearchInput');
+  if (!input) return;
+  const query = input.value.trim();
+  if (!query) return;
+
+  // If on admin page, we might want to trigger specific list refreshes
+  if (window.location.pathname.includes('admin_dashboard.html')) {
+    const adminSearch = document.getElementById('adminSearchInput');
+    if (adminSearch) {
+      adminSearch.value = query;
+      if (typeof executeSearch === 'function') executeSearch('patients');
+    }
+    return;
+  }
+
+  // Otherwise, redirect to history page with the query
+  window.location.href = `history.html?q=${encodeURIComponent(query)}`;
+}
+
+// Auto-close mobile menu on link click
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('navbarMenu');
+  const toggle = document.getElementById('mobileToggle');
+  if (menu && menu.classList.contains('show')) {
+    if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+      menu.classList.remove('show');
+    }
+  }
+});
+
+// Handle incoming search query from URL (for History page)
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (q && window.location.pathname.includes('history.html')) {
+        const inp = document.getElementById('pidInput');
+        if (inp) {
+            inp.value = q;
+            // The searchPatient function exists in history.html's scope
+            if (typeof searchPatient === 'function') setTimeout(searchPatient, 100);
+        }
+    }
+});
