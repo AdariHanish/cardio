@@ -25,7 +25,7 @@ let currentTableName = null;
 let currentTablePage = 1;
 let currentSearch = '';
 let currentSortBy = 'id';
-let currentSortOrder = 'DESC';
+let currentSortOrder = 'ASC';
 
 // Pagination State
 let patientsPage = 1;
@@ -394,7 +394,7 @@ async function loadPatientHistoryInModal() {
             <div class="section-title" style="font-size:18px;margin-bottom:16px">
                 <img src="assets/img/lucid_monitor.png" style="width:20px; height:20px; margin-right:8px; vertical-align:middle"> Patient Health History
             </div>
-            <div class="history-accordion" id="historyAccordion">
+            <div class="timeline" id="historyAccordion" style="padding-top:10px">
                 <div style="text-align:center;padding:30px">
                     <div class="spinner"></div>
                     <div style="margin-top:12px; color:var(--text-secondary)">Loading history...</div>
@@ -405,12 +405,12 @@ async function loadPatientHistoryInModal() {
     const data = await api.get(`/api/admin/readings?patient_id=${currentPatient.patient_id}`);
     const readings = data.readings || [];
 
-    // Re-query accordion since we replaced innerHTML above
-    const accordion = document.getElementById('historyAccordion');
-    if (!accordion) return;
+    // Re-query container since we replaced innerHTML above
+    const container = document.getElementById('historyAccordion');
+    if (!container) return;
 
     if (!data.success) {
-        accordion.innerHTML = `
+        container.innerHTML = `
             <div style="color:var(--red); text-align:center; padding:20px">
                 <svg class="lucid-svg" style="width:24px; height:24px; margin-bottom:8px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><br>
                 ${data.message || 'Failed to load history'}
@@ -419,7 +419,7 @@ async function loadPatientHistoryInModal() {
     }
 
     if (readings.length === 0) {
-        accordion.innerHTML = `
+        container.innerHTML = `
             <div style="text-align:center;padding:40px; color:var(--text-muted)">
                 <img src="assets/img/lucid_search.png" style="width:40px; opacity:0.3; margin-bottom:12px"><br>
                 No readings recorded yet for this patient.
@@ -427,51 +427,69 @@ async function loadPatientHistoryInModal() {
         return;
     }
 
-    accordion.innerHTML = readings.map((r, i) => {
-        const maxR = Math.max(
-            r.arrhythmia_risk || 0,
-            r.heartattack_risk || 0,
-            r.stroke_risk || 0,
-            r.hypertension_risk || 0
-        );
+    // Render as a timeline matching history.html
+    container.innerHTML = readings.map((r, i) => {
+        const arr = r.arrhythmia_risk || 0;
+        const ha  = r.heartattack_risk || 0;
+        const str = r.stroke_risk || 0;
+        const htn = r.hypertension_risk || 0;
+        const max = Math.max(arr, ha, str, htn);
+
+        const condClass = getConditionClass(max);
+        const condText  = getConditionText(max);
 
         return `
-        <div class="accordion-item">
-            <div class="accordion-header" onclick="toggleAccordion(this)">
-                <div>
-                    <span style="font-weight:700">Reading #${i + 1}</span>
-                    <span style="font-size:12px; color:var(--text-secondary); margin-left:12px">
-                        ${formatTimestamp(r.timestamp)}
-                    </span>
+        <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="glass-card reading-card" style="margin-left:0; width:100%; box-sizing:border-box">
+                <div class="reading-header">
+                    <div>
+                        <div style="font-weight:700;font-size:16px">Reading #${i + 1}</div>
+                        <div class="reading-date">${formatTimestamp(r.timestamp)}</div>
+                    </div>
+                    <div style="display:flex; gap:8px">
+                        <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 8px"
+                                onclick="confirmDeleteReading(${r.id}, ${i + 1})" title="Delete reading">
+                            <svg class="lucid-svg" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:10px">
-                        Max: ${maxR.toFixed(0)}%
-                    </span>
-                    <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 8px; display:flex; align-items:center"
-                        onclick="event.stopPropagation(); confirmDeleteReading(${r.id}, ${i + 1})" title="Delete this reading">
-                        <svg class="lucid-svg" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                    </button>
-                    <span style="color:var(--text-muted); font-size:10px">▼</span>
+
+                <div class="disease-grid" style="grid-template-columns: 1fr 1fr; gap:12px">
+                    ${buildAdminDiseaseBox('Arrhythmia', arr)}
+                    ${buildAdminDiseaseBox('Heart Attack', ha)}
+                    ${buildAdminDiseaseBox('Stroke', str)}
+                    ${buildAdminDiseaseBox('Hypertension', htn)}
                 </div>
-            </div>
-            <div class="accordion-body">
-                <div class="risk-grid-mini">
-                    ${buildMiniRisk('Arrhythmia', r.arrhythmia_risk || 0)}
-                    ${buildMiniRisk('Heart Attack', r.heartattack_risk || 0)}
-                    ${buildMiniRisk('Stroke Risk', r.stroke_risk || 0)}
-                    ${buildMiniRisk('Hypertension', r.hypertension_risk || 0)}
+
+                <div class="condition-banner ${condClass}" style="padding:10px; font-size:13px">
+                    ${condText}
                 </div>
-                <div style="display:flex;gap:20px; font-size:13px; color:var(--text-secondary); flex-wrap:wrap; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); margin-top:10px">
-                    <span><img src="assets/img/lucid_heart.png" style="width:14px; vertical-align:middle; margin-right:4px"> HR: ${r.heart_rate || '--'} bpm</span>
-                    <span><img src="assets/img/lucid_monitor.png" style="width:14px; vertical-align:middle; margin-right:4px"> SpO2: ${r.spo2 || '--'}%</span>
-                    <span><img src="assets/img/lucid_monitor.png" style="width:14px; vertical-align:middle; margin-right:4px"> BP: ${r.sbp || '--'}/${r.dbp || '--'} mmHg</span>
-                    <span><svg class="lucid-svg" style="width:14px; height:14px; vertical-align:middle; margin-right:4px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> PTT: ${r.ptt_ms || '--'} ms</span>
+
+                <div style="display:flex;gap:15px; font-size:12px; color:var(--text-secondary); flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05)">
+                    <span>HR: ${r.heart_rate || '--'} bpm</span>
+                    <span>SpO2: ${r.spo2 || '--'}%</span>
+                    <span>BP: ${r.sbp || '--'}/${r.dbp || '--'}</span>
+                    <span>PTT: ${r.ptt_ms || '--'}ms</span>
                 </div>
-                ${r.future_risk ? `<div style="margin-top:12px; padding:10px 14px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.15); border-radius:8px; font-size:13px; color:var(--text-secondary)"><img src="assets/img/lucid_ai_brain.png" style="width:16px; margin-right:8px; vertical-align:middle"> <strong>Future Prediction:</strong> ${r.future_risk}</div>` : ''}
-                ${r.overall_condition ? `<div style="margin-top:10px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; ${getConditionStyle(r.overall_condition)}"><img src="assets/img/lucid_monitor.png" style="width:16px; margin-right:8px; vertical-align:middle"> ${r.overall_condition}</div>` : ''}
             </div>
         </div>`;
     }).join('');
+}
+
+function buildAdminDiseaseBox(name, risk) {
+    const color = getRiskColor(risk);
+    const stage = getStage(risk);
+    const sClass = getStageClass(risk);
+
+    return `
+    <div class="disease-row" style="padding:10px">
+        <div class="disease-name" style="font-size:10px">${name}</div>
+        <div class="disease-risk" style="margin-bottom:0">
+            <span class="risk-pct" style="font-size:18px; color:${color}">${risk.toFixed(1)}%</span>
+            <span class="stage-badge" style="font-size:10px; ${sClass}">${stage}</span>
+        </div>
+    </div>`;
 }
 
 
@@ -1089,7 +1107,7 @@ function closeTableViewer() {
     currentTableName = null;
     currentSearch = '';
     currentSortBy = 'id';
-    currentSortOrder = 'DESC';
+    currentSortOrder = 'ASC';
 }
 
 // =============================================================
@@ -1565,45 +1583,30 @@ function escStr(str) {
         .replace(/>/g, '&gt;');
 }
 
-// Build mini risk box for accordion history
-function buildMiniRisk(name, risk) {
-    const num = parseFloat(risk) || 0;
-    const color = getRiskColor(num);
-    const stage = getStage(num);
-
-    return `
-        <div class="risk-mini-item">
-            <div style="font-size:11px;
-                         color:var(--text-muted);
-                         margin-bottom:4px">
-                ${name}
+async function loadPatientHistoryInModal() {
+    const box = document.querySelector('#patientModal .modal-body');
+    if (!box) return;
+    
+    try {
+        const patientId = window.currentPatientId;
+        const data = await api.get(`/api/admin/patient/history?id=${patientId}`);
+        
+        if (!data.success) throw new Error(data.message);
+        
+        box.innerHTML = data.readings.map(r => `
+            <div class="history-item">
+                <div class="history-date">${formatTimestamp(r.created_at)}</div>
+                <div class="history-val">${r.value}</div>
+                ${buildDiseaseBox(r.disease_risk)}
             </div>
-            <div style="font-size:20px;
-                         font-weight:700;
-                         color:${color}">
-                ${num.toFixed(1)}%
-            </div>
-            <div style="font-size:11px;
-                         color:var(--text-muted);
-                         margin-top:2px">
-                ${stage}
-            </div>
-        </div>`;
+        `).join('');
+    } catch (e) {
+        box.innerHTML = `<div class="error">Failed to load history: ${e.message}</div>`;
+    }
 }
 
-// Condition banner style
-function getConditionStyle(condition) {
-    const c = (condition || '').toLowerCase();
-    if (c.includes('high') || c.includes('critical') ||
-        c.includes('doctor')) {
-        return 'background:rgba(255,68,68,0.1);' +
-            'border:1px solid rgba(255,68,68,0.2);' +
-            'color:var(--red)';
-    }
-    if (c.includes('moderate') || c.includes('monitor') ||
-        c.includes('caution')) {
-        return 'background:rgba(255,152,0,0.1);' +
-            'border:1px solid rgba(255,152,0,0.2);' +
+function buildDiseaseBox(risk) {
+    const num = parseFloat(risk) || 0;
             'color:var(--orange)';
     }
     return 'background:rgba(0,230,118,0.1);' +
