@@ -205,7 +205,16 @@ document.addEventListener('click', (e) => {
 });
 
 // Handle incoming search query from URL (for History page)
+// Handle incoming search query from URL (for History page)
+// Also rigorously clear admin credentials if landing on a non-admin page
 window.addEventListener('DOMContentLoaded', () => {
+    // 1. Auto-wipe Admin Session on public pages
+    if (!window.location.pathname.includes('admin')) {
+        sessionStorage.removeItem('adminToken');
+        sessionStorage.removeItem('adminUser');
+    }
+
+    // 2. Extract global search routing
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
     if (q && window.location.pathname.includes('history.html')) {

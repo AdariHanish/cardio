@@ -244,7 +244,7 @@ function buildReadingRow(p) {
                 ${formatTimestamp(p.last_visit)}
             </td>
             <td style="text-align:center">
-                <button class="btn btn-primary btn-sm" onclick="openPatientModal('${p.patient_id}'); setTimeout(loadPatientHistoryInModal, 200)">
+                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openPatientModal('${p.patient_id}')">
                     View Readings
                 </button>
             </td>
