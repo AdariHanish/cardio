@@ -328,11 +328,108 @@ def start_monitor():
 def live_data():
     return jsonify(LIVE_DATA)
 
+import json
+import threading
+import time
+import datetime
+
+# --- GPIO Setup ---
+try:
+    import RPi.GPIO as GPIO
+    GPIO.setmode(GPIO.BCM)
+    GPIO_BUTTON_SAVE = 25
+    GPIO.setup(GPIO_BUTTON_SAVE, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    HAS_GPIO = True
+except Exception as e:
+    print(f"[SYSTEM] GPIO Init Failed/Skipped: {e}")
+    HAS_GPIO = False
+
+# --- Persistence Helpers ---
+def save_measurement_result(pid, preds, vitals):
+    """Saves result to both TiDB and Local Pi Memory"""
+    if not pid: return False
+
+    # 1. Prepare Payload
+    risks = [
+        preds.get('arrhythmia', {}).get('risk_pct', 0),
+        preds.get('heartattack', {}).get('risk_pct', 0),
+        preds.get('stroke', {}).get('risk_pct', 0),
+        preds.get('hypertension', {}).get('risk_pct', 0)
+    ]
+    max_risk = max(risks) if risks else 0
+    cond = "Good Overall Condition"
+    if max_risk > 70: cond = "High Risk — Consult Doctor"
+    elif max_risk > 40: cond = "Moderate — Monitor Closely"
+
+    reading_payload = {
+        "heart_rate": vitals.get('heart_rate', 0),
+        "spo2": vitals.get('spo2', 0),
+        "sbp": vitals.get('sbp', 0),
+        "dbp": vitals.get('dbp', 80),
+        "ptt_ms": vitals.get('ptt', 0),
+        "arrhythmia_risk": preds.get('arrhythmia', {}).get('risk_pct', 0),
+        "arrhythmia_type": preds.get('arrhythmia', {}).get('type', 'Normal'),
+        "heartattack_risk": preds.get('heartattack', {}).get('risk_pct', 0),
+        "stroke_risk": preds.get('stroke', {}).get('risk_pct', 0),
+        "hypertension_risk": preds.get('hypertension', {}).get('risk_pct', 0),
+        "overall_condition": cond,
+        "future_risk": preds.get('future', {}).get('overall', 'Healthy stable prediction'),
+        "timestamp": str(datetime.datetime.now())
+    }
+
+    # 2. Save to TiDB Cloud
+    print(f"[SYNC] Saving to TiDB for Patient {pid}...")
+    db.add_patient_reading(pid, reading_payload)
+
+    # 3. Save to Local Pi Memory (JSON Backup)
+    try:
+        backup_path = os.path.join(BASE_DIR, 'local_backup.json')
+        backups = []
+        if os.path.exists(backup_path):
+            with open(backup_path, 'r') as f:
+                backups = json.load(f)
+        
+        backups.append({"patient_id": pid, "data": reading_payload})
+        with open(backup_path, 'w') as f:
+            json.dump(backups, f, indent=4)
+        print(f"[LOCAL] Backup saved to {backup_path}")
+    except Exception as e:
+        print(f"[ERROR] Local backup failed: {e}")
+    
+    return True
+
+# --- Background GPIO Listener ---
+def gpio_listener():
+    if not HAS_GPIO: return
+    print(f"[SYSTEM] Hardware Button Listener Active (GPIO {GPIO_BUTTON_SAVE})")
+    while True:
+        try:
+            # Button is PUD_UP (Pressed = Low/0)
+            if GPIO.input(GPIO_BUTTON_SAVE) == GPIO.LOW:
+                pid = LIVE_DATA.get('current_patient')
+                ready = LIVE_DATA.get('predictions_ready')
+                
+                if pid and ready:
+                    print(f"[HARDWARE] Button 25 Pressed! Manual Trigger Save for {pid}")
+                    save_measurement_result(pid, LIVE_DATA.get('predictions', {}), LIVE_DATA.get('vitals', {}))
+                    # Debounce
+                    time.sleep(1)
+                else:
+                    print("[HARDWARE] Button pressed but no active patient/ready data.")
+                    time.sleep(0.5)
+            time.sleep(0.1)
+        except Exception as e:
+            print(f"[SYSTEM] GPIO Thread Error: {e}")
+            time.sleep(1)
+
+# Start GPIO thread
+thread = threading.Thread(target=gpio_listener, daemon=True)
+thread.start()
+
 @app.route('/api/monitor/update', methods=['POST'])
 def update_live():
     data = request.json or {}
     
-    # Check if we should auto-save results
     # Save only if predictions_ready transitioned to True AND we have a patient
     was_ready = LIVE_DATA.get('predictions_ready', False)
     is_ready  = data.get('predictions_ready', False)
@@ -341,38 +438,8 @@ def update_live():
     LIVE_DATA.update(data)
     
     if is_ready and not was_ready and current_pid:
-        preds = LIVE_DATA.get('predictions', {})
-        vitals = LIVE_DATA.get('vitals', {})
-        
-        # Determine overall condition
-        risks = [
-            preds.get('arrhythmia', {}).get('risk_pct', 0),
-            preds.get('heartattack', {}).get('risk_pct', 0),
-            preds.get('stroke', {}).get('risk_pct', 0),
-            preds.get('hypertension', {}).get('risk_pct', 0)
-        ]
-        max_risk = max(risks) if risks else 0
-        cond = "Good Overall Condition"
-        if max_risk > 70: cond = "High Risk — Consult Doctor"
-        elif max_risk > 40: cond = "Moderate — Monitor Closely"
-
-        reading_payload = {
-            "heart_rate": vitals.get('heart_rate', 0),
-            "spo2": vitals.get('spo2', 0),
-            "sbp": vitals.get('sbp', 0),
-            "dbp": 80, # Default if missing
-            "ptt_ms": vitals.get('ptt', 0),
-            "arrhythmia_risk": preds.get('arrhythmia', {}).get('risk_pct', 0),
-            "arrhythmia_type": preds.get('arrhythmia', {}).get('type', 'Normal'),
-            "heartattack_risk": preds.get('heartattack', {}).get('risk_pct', 0),
-            "stroke_risk": preds.get('stroke', {}).get('risk_pct', 0),
-            "hypertension_risk": preds.get('hypertension', {}).get('risk_pct', 0),
-            "overall_condition": cond,
-            "future_risk": preds.get('future', {}).get('overall', 'Healthy stable prediction')
-        }
-        
-        print(f"[AUTO-SAVE] Saving results for Patient {current_pid}...")
-        db.add_patient_reading(current_pid, reading_payload)
+        print(f"[AUTO] Triggering Auto-Save for {current_pid}")
+        save_measurement_result(current_pid, LIVE_DATA.get('predictions', {}), LIVE_DATA.get('vitals', {}))
 
     return jsonify({"success": True})
 

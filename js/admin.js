@@ -439,12 +439,14 @@ async function loadPatientHistoryInModal() {
     }
 
     accordion.innerHTML = readings.map((r, i) => {
-        const maxR = Math.max(
-            r.arrhythmia_risk || 0,
-            r.heartattack_risk || 0,
-            r.stroke_risk || 0,
-            r.hypertension_risk || 0
-        );
+        const risks_map = [
+            { name: 'Arrhythmia', val: r.arrhythmia_risk || 0 },
+            { name: 'Heart Attack', val: r.heartattack_risk || 0 },
+            { name: 'Stroke', val: r.stroke_risk || 0 },
+            { name: 'Hypertension', val: r.hypertension_risk || 0 }
+        ];
+        const top = risks_map.reduce((prev, curr) => (prev.val > curr.val) ? prev : curr);
+        const maxR = top.val;
 
         return `
         <div class="accordion-item">
@@ -456,8 +458,8 @@ async function loadPatientHistoryInModal() {
                     </span>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px">
-                    <span style="font-size:12px; font-weight:600; color:${getRiskColor(maxR)}; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.05)">
-                        Max: ${maxR.toFixed(0)}%
+                    <span style="font-size:12px; font-weight:600; color:${getRiskColor(maxR)}; background:rgba(255,255,255,0.03); padding:4px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05)">
+                        ${top.name}: ${maxR.toFixed(0)}%
                     </span>
                     <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 8px; display:flex; align-items:center"
                         onclick="event.stopPropagation(); confirmDeleteReading(${r.id}, ${i + 1})" title="Delete this reading">
