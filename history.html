@@ -414,7 +414,12 @@
         return;
       }
 
-      showAlert('alertBox', 'info', 'Searching...');
+      document.getElementById('alertBox').innerHTML = `
+        <div style="text-align:center; padding:30px">
+          <div class="spinner"></div>
+          <div style="margin-top:12px; color:var(--cyan); font-weight:500; letter-spacing:0.5px;">Searching records...</div>
+        </div>
+      `;
 
       try {
         const data = await api.get(`/api/patients/search?q=${encodeURIComponent(query)}`);
@@ -477,6 +482,14 @@
     async function loadPatientById(pid) {
       document.getElementById('multiResultsArea').style.display = 'none';
       document.getElementById('ageGroupResults').style.display = 'none';
+
+      document.getElementById('alertBox').innerHTML = `
+        <div style="text-align:center; padding:30px">
+          <div class="spinner"></div>
+          <div style="margin-top:12px; color:var(--cyan); font-weight:500; letter-spacing:0.5px;">Loading patient details...</div>
+        </div>
+      `;
+
       try {
         const detail = await api.get(`/api/patients/${pid}`);
         if (detail.success && detail.patient) {
@@ -622,7 +635,19 @@
     }
 
     async function searchByAge(age) {
+      document.getElementById('resultsArea').style.display = 'none';
+      document.getElementById('multiResultsArea').style.display = 'none';
+      document.getElementById('ageGroupResults').style.display = 'none';
+
+      document.getElementById('alertBox').innerHTML = `
+        <div style="text-align:center; padding:30px">
+          <div class="spinner"></div>
+          <div style="margin-top:12px; color:var(--cyan); font-weight:500; letter-spacing:0.5px;">Searching age groups...</div>
+        </div>
+      `;
+
       const data = await api.get(`/api/patients/age-group?age=${age}`);
+      document.getElementById('alertBox').innerHTML = '';
 
       document.getElementById('resultsArea').style.display = 'none';
       document.getElementById('ageGroupResults').style.display = 'block';

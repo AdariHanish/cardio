@@ -45,6 +45,12 @@ window.onload = function () {
     loadAdminData();
 };
 
+window.onpageshow = function (event) {
+    if (event.persisted) {
+        if (!checkAdminAuth()) return;
+    }
+};
+
 // =============================================================
 // LOAD ALL DATA
 // =============================================================
