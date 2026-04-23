@@ -197,7 +197,7 @@
 <div class="page-wrapper">
 
   <nav class="navbar">
-    <a href="index.html" class="navbar-brand">
+    <a href="index.html" class="navbar-brand" onclick="goHomeAndLogout(event)">
       <div class="brand-icon">
         <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
       </div>
@@ -215,7 +215,7 @@
     <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>
 
     <ul class="navbar-menu" id="navbarMenu">
-      <li><a href="index.html">Home</a></li>
+      <li><a href="index.html" onclick="goHomeAndLogout(event)">Home</a></li>
       <li><a href="admin_dashboard.html" class="active">
         <img src="assets/img/lucid_ai_brain.png" style="width:16px; height:16px; vertical-align:middle; margin-right:4px"> Admin Dashboard</a></li>
       <li>

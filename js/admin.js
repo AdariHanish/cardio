@@ -450,6 +450,7 @@ async function loadPatientHistoryInModal() {
                     </span>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px">
+                    <span style="font-size:12px; font-weight:600; color:${getRiskColor(maxR)}; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.05)">
                         Max: ${maxR.toFixed(0)}%
                     </span>
                     <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 8px; display:flex; align-items:center"

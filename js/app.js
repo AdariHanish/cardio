@@ -134,6 +134,12 @@ function checkAdminAuth() {
   return true;
 }
 
+function goHomeAndLogout(e) {
+    if (e) e.preventDefault();
+    sessionStorage.clear();
+    window.location.href = 'index.html';
+}
+
 function adminLogout() {
   sessionStorage.clear();
   window.location.href = 'admin.html';

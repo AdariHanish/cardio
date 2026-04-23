@@ -1,395 +1,448 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>CardioCare AI — Patient History</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    .search-card { max-width: 700px; margin: 0 auto 30px; }
-
-    .search-row {
-      display : flex;
-      gap     : 12px;
+    .search-card {
+      max-width: 700px;
+      margin: 0 auto 30px;
     }
 
-    .search-row .form-input { flex: 1; }
+    .search-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .search-row .form-input {
+      flex: 1;
+    }
 
     /* Patient Info Card */
     .patient-info-banner {
-      display               : grid;
-      grid-template-columns : auto 1fr auto;
-      gap                   : 24px;
-      align-items           : center;
-      padding               : 24px 28px;
-      background            : rgba(0,229,255,0.05);
-      border                : 1px solid var(--border-glass);
-      border-radius         : 16px;
-      margin-bottom         : 24px;
-      animation             : fadeInUp 0.4s ease;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 24px;
+      align-items: center;
+      padding: 24px 28px;
+      background: rgba(0, 229, 255, 0.05);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      margin-bottom: 24px;
+      animation: fadeInUp 0.4s ease;
     }
 
     .patient-avatar {
-      width         : 70px;
-      height        : 70px;
-      border-radius : 50%;
-      background    : linear-gradient(135deg, #00b4d8, #0077b6);
-      display       : flex;
-      align-items   : center;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00b4d8, #0077b6);
+      display: flex;
+      align-items: center;
       justify-content: center;
-      font-size     : 28px;
-      box-shadow    : 0 0 20px rgba(0,180,216,0.3);
+      font-size: 28px;
+      box-shadow: 0 0 20px rgba(0, 180, 216, 0.3);
     }
 
     .patient-meta h3 {
-      font-size   : 20px;
-      font-weight : 700;
+      font-size: 20px;
+      font-weight: 700;
       margin-bottom: 6px;
     }
 
     .patient-tags {
-      display : flex;
-      gap     : 8px;
+      display: flex;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
     .tag {
-      padding       : 3px 10px;
-      border-radius : 12px;
-      font-size     : 12px;
-      background    : rgba(255,255,255,0.08);
-      color         : var(--text-secondary);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-secondary);
     }
 
     /* Reading Card */
     .reading-card {
-      margin-bottom : 20px;
-      border-left   : 3px solid var(--cyan);
-      animation     : fadeInUp 0.5s ease;
+      margin-bottom: 20px;
+      border-left: 3px solid var(--cyan);
+      animation: fadeInUp 0.5s ease;
     }
 
     .reading-header {
-      display         : flex;
-      justify-content : space-between;
-      align-items     : center;
-      margin-bottom   : 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
     }
 
     .reading-date {
-      font-size   : 13px;
-      color       : var(--text-secondary);
+      font-size: 13px;
+      color: var(--text-secondary);
     }
 
     /* Disease Risk Row */
     .disease-grid {
-      display               : grid;
-      grid-template-columns : 1fr 1fr;
-      gap                   : 16px;
-      margin-bottom         : 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
     }
 
     .disease-row {
-      padding       : 14px 16px;
-      background    : rgba(255,255,255,0.03);
-      border-radius : 12px;
-      border        : 1px solid rgba(255,255,255,0.06);
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .disease-name {
-      font-size     : 12px;
-      color         : var(--text-muted);
+      font-size: 12px;
+      color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom : 8px;
+      margin-bottom: 8px;
     }
 
     .disease-risk {
-      display         : flex;
-      align-items     : center;
-      justify-content : space-between;
-      margin-bottom   : 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
     }
 
     .risk-pct {
-      font-size   : 22px;
-      font-weight : 700;
+      font-size: 22px;
+      font-weight: 700;
     }
 
     .stage-badge {
-      padding       : 3px 10px;
-      border-radius : 10px;
-      font-size     : 12px;
-      font-weight   : 600;
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     /* Condition Banner */
     .condition-banner {
-      padding       : 14px 20px;
-      border-radius : 12px;
-      text-align    : center;
-      font-weight   : 600;
-      font-size     : 15px;
-      margin-top    : 10px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      margin-top: 10px;
     }
 
     .condition-good {
-      background : rgba(0,230,118,0.1);
-      color      : var(--green);
-      border     : 1px solid rgba(0,230,118,0.2);
+      background: rgba(0, 230, 118, 0.1);
+      color: var(--green);
+      border: 1px solid rgba(0, 230, 118, 0.2);
     }
 
     .condition-moderate {
-      background : rgba(255,152,0,0.1);
-      color      : var(--orange);
-      border     : 1px solid rgba(255,152,0,0.2);
+      background: rgba(255, 152, 0, 0.1);
+      color: var(--orange);
+      border: 1px solid rgba(255, 152, 0, 0.2);
     }
 
     .condition-high {
-      background : rgba(255,68,68,0.1);
-      color      : var(--red);
-      border     : 1px solid rgba(255,68,68,0.2);
+      background: rgba(255, 68, 68, 0.1);
+      color: var(--red);
+      border: 1px solid rgba(255, 68, 68, 0.2);
     }
 
     /* History Timeline */
     .timeline {
-      position      : relative;
-      padding-left  : 30px;
+      position: relative;
+      padding-left: 30px;
     }
 
     .timeline::before {
-      content      : '';
-      position     : absolute;
-      left         : 10px; top : 0; bottom : 0;
-      width        : 2px;
-      background   : linear-gradient(180deg,
-        var(--cyan), transparent
-      );
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg,
+          var(--cyan), transparent);
     }
 
     .timeline-item {
-      position      : relative;
-      margin-bottom : 24px;
+      position: relative;
+      margin-bottom: 24px;
     }
 
     .timeline-dot {
-      position      : absolute;
-      left          : -25px;
-      top           : 6px;
-      width         : 12px;
-      height        : 12px;
-      border-radius : 50%;
-      background    : var(--cyan);
-      box-shadow    : 0 0 10px var(--cyan-glow);
+      position: absolute;
+      left: -25px;
+      top: 6px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
     }
 
     @keyframes fadeInUp {
-      from { opacity:0; transform:translateY(15px); }
-      to   { opacity:1; transform:translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
   </style>
 </head>
+
 <body>
-<div class="page-wrapper">
+  <div class="page-wrapper">
 
-  <nav class="navbar">    <a href="index.html" class="navbar-brand">
-      <div class="brand-icon">
-        <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
+    <nav class="navbar"> <a href="index.html" class="navbar-brand">
+        <div class="brand-icon">
+          <img src="assets/img/lucid_heart.png" alt="Heart" class="lucid-icon">
+        </div>
+        <span class="brand-text">CardioCare AI</span>
+      </a>
+
+      <!-- Global Search Bar -->
+      <div class="nav-search-container">
+        <svg class="lucid-svg nav-search-icon" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" class="nav-search-input" id="globalSearchInput" placeholder="Search Patients..."
+          oninput="debounceGlobalSearch()">
       </div>
-      <span class="brand-text">CardioCare AI</span>
-    </a>
 
-    <!-- Global Search Bar -->
-    <div class="nav-search-container">
-      <svg class="lucid-svg nav-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" class="nav-search-input" id="globalSearchInput" 
-             placeholder="Search Patients..."
-             oninput="debounceGlobalSearch()">
-    </div>
+      <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>
 
-    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>
+      <ul class="navbar-menu" id="navbarMenu">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="new_patient.html">New Patient</a></li>
+        <li><a href="history.html" class="active">Patient History</a></li>
+        <li><a href="live_monitor.html">Live Monitor</a></li>
+        <li><a href="admin.html" class="navbar-admin-btn"><svg class="lucid-svg"
+              style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg> Admin</a></li>
+      </ul>
 
-    <ul class="navbar-menu" id="navbarMenu">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="new_patient.html">New Patient</a></li>
-      <li><a href="history.html" class="active">Patient History</a></li>
-      <li><a href="live_monitor.html">Live Monitor</a></li>
-      <li><a href="admin.html" class="navbar-admin-btn"><svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Admin</a></li>
-    </ul>
+    </nav>
 
-  </nav>
+    <div class="main-content">
 
-  <div class="main-content">
-
-    <div style="text-align:center;margin-bottom:40px">
-      <div class="section-title" style="font-size:28px">
-        <svg class="lucid-svg lucid-svg-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Patient History
+      <div style="text-align:center;margin-bottom:40px">
+        <div class="section-title" style="font-size:28px">
+          <svg class="lucid-svg lucid-svg-lg" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+          Patient History
+        </div>
+        <p class="section-subtitle">
+          Search by Patient ID or Name to retrieve full history
+        </p>
       </div>
-      <p class="section-subtitle">
-        Search by Patient ID or Name to retrieve full history
-      </p>
-    </div>
 
-    <!-- Search Card -->
-    <div class="glass-card search-card">
-      <div id="alertBox"></div>
+      <!-- Search Card -->
+      <div class="glass-card search-card">
+        <div id="alertBox"></div>
         <div class="search-box">
-          <input type="text" class="form-input" 
-                 id="pidInput" 
-                 placeholder="Search by Patient ID, Name, or Contact..."
-                 oninput="debounceSearchPatient()">
+          <input type="text" class="form-input" id="pidInput" placeholder="Search by Patient ID, Name, or Contact..."
+            oninput="debounceSearchPatient()">
         </div>
-      <div style="margin-top:12px;font-size:12px;color:var(--text-muted);
+        <div style="margin-top:12px;font-size:12px;color:var(--text-muted);
                   text-align:center">
-        Type at least 3 characters &bull; Search by ID &bull; Name &bull; Age (shows age group)
-      </div>
-    </div>
-
-    <!-- Multi-Results List (shows all matching patients) -->
-    <div id="multiResultsArea" style="display:none">
-      <div class="glass-card">
-        <div class="flex-between mb-3">
-          <div class="section-title">
-            <svg class="lucid-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Search Results
-          </div>
-          <span class="badge badge-online" id="matchCount">0 found</span>
+          Type at least 3 characters &bull; Search by ID &bull; Name &bull; Age (shows age group)
         </div>
-        <div id="matchList"></div>
-      </div>
-    </div>
-
-    <!-- Results Area -->
-    <div id="resultsArea" style="display:none">
-
-      <!-- Patient Info Banner -->
-      <div class="patient-info-banner" id="patientBanner">
-        <div class="patient-avatar" id="patientAvatar">
-          <svg class="lucid-svg" style="margin:0;width:32px;height:32px" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </div>
-        <div class="patient-meta">
-          <h3 id="patientNameDisp">—</h3>
-          <div class="patient-tags" id="patientTags"></div>
-        </div>
-        <a id="startMonitorLink" href="live_monitor.html"
-           class="btn btn-primary">
-          <svg class="lucid-svg lucid-svg-sm" style="stroke:white" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          Start Monitoring
-        </a>
       </div>
 
-      <!-- History Section -->
-      <div class="glass-card">
-        <div class="flex-between mb-3">
-          <div class="section-title">
-            <svg class="lucid-svg" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            Health History
+      <!-- Multi-Results List (shows all matching patients) -->
+      <div id="multiResultsArea" style="display:none">
+        <div class="glass-card">
+          <div class="flex-between mb-3">
+            <div class="section-title">
+              <svg class="lucid-svg" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Search Results
+            </div>
+            <span class="badge badge-online" id="matchCount">0 found</span>
           </div>
-          <span class="badge badge-online" id="readingCount">
-            0 Readings
-          </span>
+          <div id="matchList"></div>
         </div>
+      </div>
 
-        <div class="timeline" id="historyTimeline">
-          <!-- Populated by JS -->
-        </div>
+      <!-- Results Area -->
+      <div id="resultsArea" style="display:none">
 
-        <div id="noHistory" style="display:none;text-align:center;
-             padding:40px;color:var(--text-secondary)">
-          <div style="font-size:40px;margin-bottom:16px">
-            <svg class="lucid-svg" style="width:48px;height:48px;opacity:0.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <!-- Patient Info Banner -->
+        <div class="patient-info-banner" id="patientBanner">
+          <div class="patient-avatar" id="patientAvatar">
+            <svg class="lucid-svg" style="margin:0;width:32px;height:32px" viewBox="0 0 24 24">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </div>
-          No readings found for this patient yet.<br>
-          <a href="live_monitor.html" class="btn btn-outline mt-3">
-            <svg class="lucid-svg lucid-svg-sm" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-            Start First Reading
+          <div class="patient-meta">
+            <h3 id="patientNameDisp">—</h3>
+            <div class="patient-tags" id="patientTags"></div>
+          </div>
+          <a id="startMonitorLink" href="live_monitor.html" class="btn btn-primary">
+            <svg class="lucid-svg lucid-svg-sm" style="stroke:white" viewBox="0 0 24 24">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+            Start Monitoring
           </a>
         </div>
-      </div>
-    </div>
 
-    <!-- Age Group Results -->
-    <div id="ageGroupResults" style="display:none">
-      <div class="glass-card">
-        <div class="section-title mb-3">
-          <svg class="lucid-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Age Group Results
+        <!-- History Section -->
+        <div class="glass-card">
+          <div class="flex-between mb-3">
+            <div class="section-title">
+              <svg class="lucid-svg" viewBox="0 0 24 24">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+              Health History
+            </div>
+            <span class="badge badge-online" id="readingCount">
+              0 Readings
+            </span>
+          </div>
+
+          <div class="timeline" id="historyTimeline">
+            <!-- Populated by JS -->
+          </div>
+
+          <div id="noHistory" style="display:none;text-align:center;
+             padding:40px;color:var(--text-secondary)">
+            <div style="font-size:40px;margin-bottom:16px">
+              <svg class="lucid-svg" style="width:48px;height:48px;opacity:0.5" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
+            No readings found for this patient yet.<br>
+            <a href="live_monitor.html" class="btn btn-outline mt-3">
+              <svg class="lucid-svg lucid-svg-sm" viewBox="0 0 24 24">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+              Start First Reading
+            </a>
+          </div>
         </div>
-        <div id="ageGroupTable"></div>
       </div>
+
+      <!-- Age Group Results -->
+      <div id="ageGroupResults" style="display:none">
+        <div class="glass-card">
+          <div class="section-title mb-3">
+            <svg class="lucid-svg" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Age Group Results
+          </div>
+          <div id="ageGroupTable"></div>
+        </div>
+      </div>
+
     </div>
-
   </div>
-</div>
 
-<script src="js/app.js"></script>
-<script src="js/patients.js"></script>
-<script>
-  let patientSearchTimeout;
-  let lastSearchedQuery = '';
+  <script src="js/app.js"></script>
+  <script src="js/patients.js"></script>
+  <script>
+    let patientSearchTimeout;
+    let lastSearchedQuery = '';
 
-  function debounceSearchPatient() {
-     clearTimeout(patientSearchTimeout);
-     const val = document.getElementById('pidInput').value.trim();
-     // Don't re-search the same query
-     if (val === lastSearchedQuery) return;
-     // Clear results if input is cleared
-     if (!val) {
-       lastSearchedQuery = '';
-       document.getElementById('alertBox').innerHTML = '';
-       document.getElementById('resultsArea').style.display = 'none';
-       document.getElementById('multiResultsArea').style.display = 'none';
-       return;
-     }
-     // Need at least 3 chars
-     if (val.length < 3) return;
-     patientSearchTimeout = setTimeout(() => {
-         searchPatient();
-     }, 500);
-  }
-
-  async function searchPatient() {
-    const query = document.getElementById('pidInput').value.trim();
-    if (!query || query.length < 3) return;
-
-    // Mark this query as searched so debounce won't re-trigger
-    lastSearchedQuery = query;
-
-    // Check if pure number → age search (only if <= 120)
-    if (/^\d+$/.test(query) && parseInt(query) <= 120) {
-      await searchByAge(parseInt(query));
-      return;
-    }
-
-    showAlert('alertBox', 'info', 'Searching...');
-
-    try {
-      const data = await api.get(`/api/patients/search?q=${encodeURIComponent(query)}`);
-
-      if (!data.success || !data.patients || data.patients.length === 0) {
-        showAlert('alertBox', 'error', 'No patients found matching your search.');
+    function debounceSearchPatient() {
+      clearTimeout(patientSearchTimeout);
+      const val = document.getElementById('pidInput').value.trim();
+      // Don't re-search the same query
+      if (val === lastSearchedQuery) return;
+      // Clear results if input is cleared
+      if (!val) {
+        lastSearchedQuery = '';
+        document.getElementById('alertBox').innerHTML = '';
         document.getElementById('resultsArea').style.display = 'none';
         document.getElementById('multiResultsArea').style.display = 'none';
         return;
       }
+      // Need at least 3 chars
+      if (val.length < 3) return;
+      patientSearchTimeout = setTimeout(() => {
+        searchPatient();
+      }, 500);
+    }
 
-      document.getElementById('alertBox').innerHTML = '';
-      const patients = data.patients;
+    async function searchPatient() {
+      const query = document.getElementById('pidInput').value.trim();
+      if (!query || query.length < 3) return;
 
-      // If only 1 result, load directly
-      if (patients.length === 1) {
-        document.getElementById('multiResultsArea').style.display = 'none';
-        await loadPatientById(patients[0].patient_id);
+      // Mark this query as searched so debounce won't re-trigger
+      lastSearchedQuery = query;
+
+      // Check if pure number → age search (only if <= 120)
+      if (/^\d+$/.test(query) && parseInt(query) <= 120) {
+        await searchByAge(parseInt(query));
         return;
       }
 
-      // Multiple results — show selection list
-      document.getElementById('resultsArea').style.display = 'none';
-      document.getElementById('ageGroupResults').style.display = 'none';
-      document.getElementById('multiResultsArea').style.display = 'block';
-      document.getElementById('matchCount').textContent = `${patients.length} found`;
+      showAlert('alertBox', 'info', 'Searching...');
 
-      const listHtml = patients.map(p => `
+      try {
+        const data = await api.get(`/api/patients/search?q=${encodeURIComponent(query)}`);
+
+        if (!data.success || !data.patients || data.patients.length === 0) {
+          showAlert('alertBox', 'error', 'No patients found matching your search.');
+          document.getElementById('resultsArea').style.display = 'none';
+          document.getElementById('multiResultsArea').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('alertBox').innerHTML = '';
+        const patients = data.patients;
+
+        // If only 1 result, load directly
+        if (patients.length === 1) {
+          document.getElementById('multiResultsArea').style.display = 'none';
+          await loadPatientById(patients[0].patient_id);
+          return;
+        }
+
+        // Multiple results — show selection list
+        document.getElementById('resultsArea').style.display = 'none';
+        document.getElementById('ageGroupResults').style.display = 'none';
+        document.getElementById('multiResultsArea').style.display = 'block';
+        document.getElementById('matchCount').textContent = `${patients.length} found`;
+
+        const listHtml = patients.map(p => `
         <div style="display:flex; align-items:center; justify-content:space-between; 
                     padding:14px 18px; margin-bottom:8px;
                     background:rgba(255,255,255,0.03); border:1px solid var(--border-glass);
@@ -414,39 +467,39 @@
         </div>
       `).join('');
 
-      document.getElementById('matchList').innerHTML = listHtml;
+        document.getElementById('matchList').innerHTML = listHtml;
 
-    } catch(e) {
-      showAlert('alertBox', 'error', 'Cannot connect to database.');
-    }
-  }
-
-  async function loadPatientById(pid) {
-    document.getElementById('multiResultsArea').style.display = 'none';
-    document.getElementById('ageGroupResults').style.display = 'none';
-    try {
-      const detail = await api.get(`/api/patients/${pid}`);
-      if (detail.success && detail.patient) {
-        displayPatient(detail.patient, detail.readings || []);
-      } else {
-        showAlert('alertBox', 'error', 'Could not load patient details.');
+      } catch (e) {
+        showAlert('alertBox', 'error', 'Cannot connect to database.');
       }
-    } catch(e) {
-      showAlert('alertBox', 'error', 'Connection error.');
     }
-  }
 
-  function displayPatient(patient, readings) {
-    document.getElementById('ageGroupResults').style.display = 'none';
-    document.getElementById('resultsArea').style.display = 'block';
+    async function loadPatientById(pid) {
+      document.getElementById('multiResultsArea').style.display = 'none';
+      document.getElementById('ageGroupResults').style.display = 'none';
+      try {
+        const detail = await api.get(`/api/patients/${pid}`);
+        if (detail.success && detail.patient) {
+          displayPatient(detail.patient, detail.readings || []);
+        } else {
+          showAlert('alertBox', 'error', 'Could not load patient details.');
+        }
+      } catch (e) {
+        showAlert('alertBox', 'error', 'Connection error.');
+      }
+    }
 
-    // Banner
-    const avatar = `<img src="assets/img/lucid_patient.png" style="width:32px">`;
-    document.getElementById('patientAvatar').innerHTML = avatar;
-    document.getElementById('patientNameDisp').textContent = patient.name;
+    function displayPatient(patient, readings) {
+      document.getElementById('ageGroupResults').style.display = 'none';
+      document.getElementById('resultsArea').style.display = 'block';
 
-    const tags = document.getElementById('patientTags');
-    tags.innerHTML = `
+      // Banner
+      const avatar = `<img src="assets/img/lucid_patient.png" style="width:32px">`;
+      document.getElementById('patientAvatar').innerHTML = avatar;
+      document.getElementById('patientNameDisp').textContent = patient.name;
+
+      const tags = document.getElementById('patientTags');
+      tags.innerHTML = `
       <span class="tag">ID: ${patient.patient_id}</span>
       <span class="tag">Age: ${patient.age} yrs</span>
       <span class="tag">Weight: ${patient.weight} kg</span>
@@ -454,53 +507,53 @@
       <span class="tag">Registered: ${patient.registered_on}</span>
     `;
 
-    document.getElementById('startMonitorLink').href = `live_monitor.html?pid=${patient.patient_id}`;
+      document.getElementById('startMonitorLink').href = `live_monitor.html?pid=${patient.patient_id}`;
 
-    // Readings
-    const count = readings.length;
-    document.getElementById('readingCount').textContent = `${count} Reading${count !== 1 ? 's' : ''}`;
+      // Readings
+      const count = readings.length;
+      document.getElementById('readingCount').textContent = `${count} Reading${count !== 1 ? 's' : ''}`;
 
-    const timeline = document.getElementById('historyTimeline');
-    const noHist   = document.getElementById('noHistory');
+      const timeline = document.getElementById('historyTimeline');
+      const noHist = document.getElementById('noHistory');
 
-    if (count === 0) {
-      timeline.innerHTML = '';
-      noHist.style.display = 'block';
-      return;
+      if (count === 0) {
+        timeline.innerHTML = '';
+        noHist.style.display = 'block';
+        return;
+      }
+
+      noHist.style.display = 'none';
+      timeline.innerHTML = readings.map((r, i) => buildReadingHTML(r, i)).join('');
     }
 
-    noHist.style.display = 'none';
-    timeline.innerHTML = readings.map((r, i) => buildReadingHTML(r, i)).join('');
-  }
+    function buildReadingHTML(reading, index) {
+      const arr = reading.arrhythmia_risk || 0;
+      const ha = reading.heartattack_risk || 0;
+      const htn = reading.hypertension_risk || 0;
+      const str = reading.stroke_risk || 0;
+      const max = Math.max(arr, ha, htn, str);
 
-  function buildReadingHTML(reading, index) {
-    const arr = reading.arrhythmia_risk || 0;
-    const ha  = reading.heartattack_risk || 0;
-    const htn = reading.hypertension_risk || 0;
-    const str = reading.stroke_risk || 0;
-    const max = Math.max(arr, ha, htn, str);
+      const condClass = max > 70 ? 'condition-high' :
+        max > 40 ? 'condition-moderate' : 'condition-good';
+      const condText = max > 70 ? 'High Risk — Consult Doctor' :
+        max > 40 ? 'Moderate — Monitor Closely' :
+          'Good Overall Condition';
 
-    const condClass = max > 70 ? 'condition-high' :
-                      max > 40 ? 'condition-moderate' : 'condition-good';
-    const condText  = max > 70 ? 'High Risk — Consult Doctor' :
-                      max > 40 ? 'Moderate — Monitor Closely' :
-                                 'Good Overall Condition';
+      const getRiskColor = (v) =>
+        v > 70 ? 'var(--red)' :
+          v > 40 ? 'var(--orange)' : 'var(--green)';
 
-    const getRiskColor = (v) =>
-      v > 70 ? 'var(--red)' :
-      v > 40 ? 'var(--orange)' : 'var(--green)';
+      const getStageClass = (v) =>
+        v > 70 ? 'background:rgba(255,68,68,0.2);color:var(--red)' :
+          v > 40 ? 'background:rgba(255,152,0,0.2);color:var(--orange)' :
+            'background:rgba(0,230,118,0.2);color:var(--green)';
 
-    const getStageClass = (v) =>
-      v > 70 ? 'background:rgba(255,68,68,0.2);color:var(--red)' :
-      v > 40 ? 'background:rgba(255,152,0,0.2);color:var(--orange)' :
-               'background:rgba(0,230,118,0.2);color:var(--green)';
+      const getStage = (v) =>
+        v > 70 ? 'Stage 4' :
+          v > 60 ? 'Stage 3' :
+            v > 30 ? 'Stage 2' : 'Stage 1';
 
-    const getStage = (v) =>
-      v > 70 ? 'Stage 4' :
-      v > 60 ? 'Stage 3' :
-      v > 30 ? 'Stage 2' : 'Stage 1';
-
-    return `
+      return `
     <div class="timeline-item">
       <div class="timeline-dot"></div>
       <div class="glass-card reading-card">
@@ -522,13 +575,13 @@
 
         <div class="disease-grid">
           ${buildDiseaseBox('Arrhythmia', arr,
-             getRiskColor(arr), getStage(arr), getStageClass(arr))}
+        getRiskColor(arr), getStage(arr), getStageClass(arr))}
           ${buildDiseaseBox('Heart Attack', ha,
-             getRiskColor(ha),  getStage(ha),  getStageClass(ha))}
+          getRiskColor(ha), getStage(ha), getStageClass(ha))}
           ${buildDiseaseBox('Stroke Risk', str,
-             getRiskColor(str), getStage(str), getStageClass(str))}
+            getRiskColor(str), getStage(str), getStageClass(str))}
           ${buildDiseaseBox('Hypertension', htn,
-             getRiskColor(htn), getStage(htn), getStageClass(htn))}
+              getRiskColor(htn), getStage(htn), getStageClass(htn))}
         </div>
 
         <div class="condition-banner ${condClass}">
@@ -543,10 +596,10 @@
         </div>` : ''}
       </div>
     </div>`;
-  }
+    }
 
-  function buildDiseaseBox(name, risk, color, stage, stageClass) {
-    return `
+    function buildDiseaseBox(name, risk, color, stage, stageClass) {
+      return `
     <div class="disease-row">
       <div class="disease-name">${name}</div>
       <div class="disease-risk">
@@ -560,24 +613,24 @@
       <div class="progress-bar-container">
         <div class="progress-bar-fill
           ${risk > 70 ? 'progress-critical' :
-            risk > 40 ? 'progress-high' :
+          risk > 40 ? 'progress-high' :
             risk > 20 ? 'progress-medium' : 'progress-low'}"
           style="width:${risk}%">
         </div>
       </div>
     </div>`;
-  }
+    }
 
-  async function searchByAge(age) {
-    const data = await api.get(`/api/patients/age-group?age=${age}`);
+    async function searchByAge(age) {
+      const data = await api.get(`/api/patients/age-group?age=${age}`);
 
-    document.getElementById('resultsArea').style.display = 'none';
-    document.getElementById('ageGroupResults').style.display = 'block';
+      document.getElementById('resultsArea').style.display = 'none';
+      document.getElementById('ageGroupResults').style.display = 'block';
 
-    const ageMin = Math.max(0, age - 5);
-    const ageMax = age + 5;
+      const ageMin = Math.max(0, age - 5);
+      const ageMax = age + 5;
 
-    let html = `
+      let html = `
       <p class="text-muted mb-3">
         Showing patients aged ${ageMin}–${ageMax} years
         (${data.patients?.length || 0} found)
@@ -597,11 +650,11 @@
           <tbody>
     `;
 
-    if (!data.success || !data.patients || data.patients.length === 0) {
-      html += `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px">No patients found in this age group</td></tr>`;
-    } else {
-      data.patients.forEach(p => {
-        html += `
+      if (!data.success || !data.patients || data.patients.length === 0) {
+        html += `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px">No patients found in this age group</td></tr>`;
+      } else {
+        data.patients.forEach(p => {
+          html += `
         <tr>
           <td class="text-cyan">${p.patient_id}</td>
           <td>${p.name}</td>
@@ -612,14 +665,15 @@
             <button class="btn btn-outline btn-sm" onclick="loadPatientById('${p.patient_id}')">View</button>
           </td>
         </tr>`;
-      });
+        });
+      }
+
+      html += '</tbody></table>';
+      document.getElementById('ageGroupTable').innerHTML = html;
     }
 
-    html += '</tbody></table>';
-    document.getElementById('ageGroupTable').innerHTML = html;
-  }
 
-
-</script>
+  </script>
 </body>
+
 </html>
