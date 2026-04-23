@@ -326,28 +326,34 @@
 <script src="js/patients.js"></script>
 <script>
   let patientSearchTimeout;
+  let lastSearchedQuery = '';
+
   function debounceSearchPatient() {
      clearTimeout(patientSearchTimeout);
+     const val = document.getElementById('pidInput').value.trim();
+     // Don't re-search the same query
+     if (val === lastSearchedQuery) return;
+     // Clear results if input is cleared
+     if (!val) {
+       lastSearchedQuery = '';
+       document.getElementById('alertBox').innerHTML = '';
+       document.getElementById('resultsArea').style.display = 'none';
+       document.getElementById('multiResultsArea').style.display = 'none';
+       return;
+     }
+     // Need at least 3 chars
+     if (val.length < 3) return;
      patientSearchTimeout = setTimeout(() => {
          searchPatient();
-     }, 400); // 400ms delay for auto-search
+     }, 500);
   }
 
   async function searchPatient() {
     const query = document.getElementById('pidInput').value.trim();
-    if (!query) {
-      document.getElementById('alertBox').innerHTML = '';
-      document.getElementById('resultsArea').style.display = 'none';
-      document.getElementById('multiResultsArea').style.display = 'none';
-      return;
-    }
+    if (!query || query.length < 3) return;
 
-    // Minimum 3 characters required
-    if (query.length < 3) {
-      document.getElementById('alertBox').innerHTML = '';
-      document.getElementById('multiResultsArea').style.display = 'none';
-      return;
-    }
+    // Mark this query as searched so debounce won't re-trigger
+    lastSearchedQuery = query;
 
     // Check if pure number → age search (only if <= 120)
     if (/^\d+$/.test(query) && parseInt(query) <= 120) {

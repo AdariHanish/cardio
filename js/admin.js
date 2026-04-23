@@ -1317,44 +1317,7 @@ function filterReadingsPatients() {
     renderReadingsTable(filtered);
 }
 
-function renderReadingsTable(patients) {
-    const tbody = document.getElementById('readingsTableBody');
-    if (!tbody) return;
 
-    if (patients.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted)">
-                    <img src="assets/img/lucid_search.png" style="width:40px; opacity:0.3; margin-bottom:12px"><br>
-                    No matching patients found.
-                </td>
-            </tr>`;
-        return;
-    }
-
-    tbody.innerHTML = patients.map(p => `
-        <tr>
-            <td class="text-cyan" style="font-weight:700">${p.patient_id}</td>
-            <td style="font-weight:600">${p.name}</td>
-            <td>${p.age} yrs</td>
-            <td>${p.gender}</td>
-            <td>
-                <span class="badge badge-online" style="font-size:11px">
-                    ${p.reading_count} readings
-                </span>
-            </td>
-            <td style="font-size:12px; color:var(--text-secondary)">
-                ${formatTimestamp(p.last_visit)}
-            </td>
-            <td style="text-align:center">
-                <button class="btn btn-outline btn-sm" 
-                        onclick="openPatientModal('${p.patient_id}'); setTimeout(() => loadPatientHistoryInModal(), 100);">
-                    <img src="assets/img/lucid_monitor.png" style="width:14px; margin-right:4px; vertical-align:middle"> View Readings
-                </button>
-            </td>
-        </tr>
-    `).join('');
-}
 
 async function registerNewAdmin() {
     const user = (document.getElementById('regAdminUser')?.value || '').trim();
