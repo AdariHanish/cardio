@@ -589,6 +589,34 @@ def delete_reading(reading_id, token):
     finally:
         conn.close()
 
+def delete_table_row(table_name, row_id, token):
+    """Generic delete for DB Tables view"""
+    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
+    allowed_tables = ['patients', 'readings', 'admin']
+    if table_name not in allowed_tables: return {"success": False, "message": "Invalid table"}
+    
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Connection failed"}
+    try:
+        with conn.cursor() as cur:
+            if table_name == 'patients':
+                cur.execute("SELECT patient_id FROM patients WHERE id = %s", (row_id,))
+                patient = cur.fetchone()
+                if not patient: return {"success": False, "message": "Patient not found"}
+                pid = patient['patient_id']
+                cur.execute("DELETE FROM readings WHERE patient_id = %s", (pid,))
+                readings_deleted = cur.rowcount
+                cur.execute("DELETE FROM patients WHERE id = %s", (row_id,))
+                return {"success": True, "message": f"Patient deleted from database tables", "readings_deleted": readings_deleted}
+            else:
+                cur.execute(f"DELETE FROM {table_name} WHERE id = %s", (row_id,))
+                if cur.rowcount == 0: return {"success": False, "message": "Row not found"}
+                return {"success": True, "message": f"Row {row_id} deleted from {table_name}"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+    finally:
+        conn.close()
+
 # =============================================================
 # DATABASE TABLE VIEWER FUNCTIONS
 # =============================================================

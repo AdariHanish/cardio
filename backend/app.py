@@ -220,6 +220,11 @@ def admin_table_data(table_name):
     
     return jsonify(db.get_table_data(table_name, page=page, search=search, sort_by=sort_by, sort_order=sort_order))
 
+@app.route('/api/admin/db/tables/<table_name>/rows/<row_id>', methods=['DELETE'])
+def admin_delete_table_row(table_name, row_id):
+    token = request.headers.get('X-Admin-Token', '')
+    return jsonify(db.delete_table_row(table_name, row_id, token))
+
 @app.route('/api/admin/patients/<pid>/delete', methods=['DELETE'])
 def admin_delete_patient(pid):
     token = request.headers.get('X-Admin-Token', '')

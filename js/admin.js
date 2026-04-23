@@ -4,6 +4,18 @@
 // =============================================================
 
 // =============================================================
+// AUTO-SEARCH DEBOUNCER
+// =============================================================
+let searchTimeout;
+
+function debounceSearch(type) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        executeSearch(type);
+    }, 400); // 400ms delay for auto-search
+}
+
+// =============================================================
 // GLOBAL STATE
 // =============================================================
 let allPatients = [];
@@ -275,10 +287,28 @@ function filterPatients() {
 // OPEN PATIENT DETAIL MODAL
 // =============================================================
 async function openPatientModal(patientId) {
-    const patient = allPatients.find(
-        p => p.patient_id === patientId
-    );
-    if (!patient) return;
+    let patient = allPatients.find(p => p.patient_id === patientId);
+    
+    // Fallback 1: Check activeReadingsPatients array if paged out of allPatients
+    if (!patient && typeof activeReadingsPatients !== 'undefined') {
+        patient = activeReadingsPatients.find(p => p.patient_id === patientId);
+    }
+    
+    // Fallback 2: Fetch straight from API if completely missing locally
+    if (!patient) {
+        try {
+            const data = await api.get(`/api/patients/${patientId}`);
+            if (data.success && data.patient) {
+                patient = data.patient;
+            } else {
+                console.error('Patient completely missing:', patientId);
+                return;
+            }
+        } catch (e) {
+            console.error('Error fetching patient fallback:', e);
+            return;
+        }
+    }
 
     currentPatient = patient;
 

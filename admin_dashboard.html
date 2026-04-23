@@ -341,12 +341,8 @@
             <input type="text" class="form-input"
                    id="adminSearchInput" style="flex:1;min-width:200px"
                    placeholder="Search by Name, ID, or Contact..."
-                   onkeydown="if(event.key==='Enter') executeSearch('patients')">
+                   oninput="debounceSearch('patients')">
             
-            <button class="btn btn-primary" onclick="executeSearch('patients')">
-              <svg class="lucid-svg-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search
-            </button>
-
             <select class="search-filter" id="genderFilter"
                     onchange="executeSearch('patients')">
               <option value="">All Genders</option>
@@ -397,10 +393,7 @@
             <input type="text" class="form-input"
                    id="readingsSearchInput" style="flex:1"
                    placeholder="Search by ID, Name, or Contact..."
-                   onkeydown="if(event.key==='Enter') executeSearch('readings')">
-            <button class="btn btn-primary" onclick="executeSearch('readings')">
-              <svg class="lucid-svg-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search
-            </button>
+                   oninput="debounceSearch('readings')">
           </div>
 
           <div class="table-responsive">

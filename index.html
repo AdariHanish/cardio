@@ -222,8 +222,8 @@
     <div class="nav-search-container">
       <svg class="lucid-svg nav-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" class="nav-search-input" id="globalSearchInput" 
-             placeholder="Search patients (ID, Name)..."
-             onkeydown="if(event.key==='Enter') executeGlobalSearch()">
+             placeholder="Search Patients..."
+             oninput="debounceGlobalSearch()">
     </div>
 
     <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>

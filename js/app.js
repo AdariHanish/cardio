@@ -154,13 +154,22 @@ function toggleMobileMenu() {
 /**
  * Global Search execution from navbar
  */
+let globalSearchTimeout;
+
+function debounceGlobalSearch() {
+  clearTimeout(globalSearchTimeout);
+  globalSearchTimeout = setTimeout(() => {
+      executeGlobalSearch();
+  }, 500); // 500ms delay to prevent rapid redirects
+}
+
 async function executeGlobalSearch() {
   const input = document.getElementById('globalSearchInput');
   if (!input) return;
   const query = input.value.trim();
   if (!query) return;
 
-  // If on admin page, we might want to trigger specific list refreshes
+  // If on admin page, trigger specific list refreshes cleanly
   if (window.location.pathname.includes('admin_dashboard.html')) {
     const adminSearch = document.getElementById('adminSearchInput');
     if (adminSearch) {
@@ -169,8 +178,18 @@ async function executeGlobalSearch() {
     }
     return;
   }
+  
+  // If we are already on the history page, route directly to the active search instead of a hard redirect
+  if (window.location.pathname.includes('history.html')) {
+      const historyInput = document.getElementById('pidInput');
+      if (historyInput) {
+          historyInput.value = query;
+          if (typeof searchPatient === 'function') searchPatient();
+      }
+      return;
+  }
 
-  // Otherwise, redirect to history page with the query
+  // Otherwise, fallback to history search redirect
   window.location.href = `history.html?q=${encodeURIComponent(query)}`;
 }
 

@@ -202,8 +202,8 @@
     <div class="nav-search-container">
       <svg class="lucid-svg nav-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" class="nav-search-input" id="globalSearchInput" 
-             placeholder="Search patients (ID, Name)..."
-             onkeydown="if(event.key==='Enter') executeGlobalSearch()">
+             placeholder="Search Patients..."
+             oninput="debounceGlobalSearch()">
     </div>
 
     <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">☰</button>
@@ -237,10 +237,7 @@
           <input type="text" class="form-input" 
                  id="pidInput" 
                  placeholder="Search by Patient ID, Name, or Contact..."
-                 onkeydown="if(event.key==='Enter') searchPatient()">
-          <button class="btn btn-primary" onclick="searchPatient()" id="searchBtn">
-            <svg class="lucid-svg-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search
-          </button>
+                 oninput="debounceSearchPatient()">
         </div>
       <div style="margin-top:12px;font-size:12px;color:var(--text-muted);
                   text-align:center">
@@ -314,6 +311,14 @@
 <script src="js/app.js"></script>
 <script src="js/patients.js"></script>
 <script>
+  let patientSearchTimeout;
+  function debounceSearchPatient() {
+     clearTimeout(patientSearchTimeout);
+     patientSearchTimeout = setTimeout(() => {
+         searchPatient();
+     }, 400); // 400ms delay for auto-search
+  }
+
   async function searchPatient() {
     const query = document.getElementById('pidInput').value.trim();
     if (!query) {
