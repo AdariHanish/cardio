@@ -140,6 +140,111 @@ function goHomeAndLogout(e) {
     window.location.href = 'index.html';
 }
 
+function showStageInfo(stageStr, diseaseName) {
+  // Prevent duplicate modals
+  if (document.getElementById('stageInfoModal')) return;
+
+  const getDetails = (stage) => {
+    switch (stage.toLowerCase()) {
+      case 'stage 1':
+        return {
+          title: 'Normal / Low Risk',
+          color: 'var(--green)',
+          desc: 'Your risk level is low and within healthy bounds.',
+          precautions: [
+            'Maintain a balanced, nutritious diet',
+            'Continue regular physical exercise (30 mins/day)',
+            'Monitor blood pressure occasionally',
+            'Get quality sleep and manage stress well'
+          ]
+        };
+      case 'stage 2':
+        return {
+          title: 'Moderate Risk',
+          color: '+var(--orange)',
+          desc: 'Some indicators are elevated. Early intervention can reverse this.',
+          precautions: [
+            'Reduce dietary sodium, sugar, and processed foods',
+            'Increase cardiovascular workouts',
+            'Consult a doctor for a routine cardiovascular checkup',
+            'Consider logging vitals weekly'
+          ]
+        };
+      case 'stage 3':
+        return {
+          title: 'High Risk',
+          color: 'var(--red)',
+          desc: 'Significant clinical warning signs are present.',
+          precautions: [
+            'Schedule a specialist appointment immediately',
+            'Strictly adhere to any prescribed medications',
+            'Eliminate smoking and alcohol consumption',
+            'Monitor vitals daily (BP, SpO2, Heart Rate)'
+          ]
+        };
+      case 'stage 4':
+        return {
+          title: 'Critical Risk',
+          color: 'var(--red)',
+          desc: 'Immediate, potentially life-threatening danger.',
+          precautions: [
+            'Seek emergency medical intervention if symptoms appear',
+            'Do NOT ignore chest pain, numbness, or severe dizziness',
+            'Follow strict medical supervision protocols',
+            'Complete bed rest or highly restricted physical activity as advised'
+          ]
+        };
+      default:
+        return {
+          title: 'Unknown Stage',
+          color: 'var(--cyan)',
+          desc: 'No detailed clinical data available.',
+          precautions: ['Consult your healthcare provider.']
+        };
+    }
+  };
+
+  const info = getDetails(stageStr);
+  const isHighRisk = stageStr.includes('3') || stageStr.includes('4');
+  const actualColor = info.color.replace('+', '');
+
+  const modalHtml = `
+    <div id="stageInfoModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); z-index:99999; display:flex; align-items:center; justify-content:center; animation: fadeIn .2s ease;">
+      <div style="background:#0a192f; border:1px solid ${actualColor}55; border-radius:16px; padding:30px; max-width:450px; width:90%; position:relative; box-shadow:0 15px 40px rgba(0,0,0,0.5); animation: slideUp .3s ease;">
+        <button onclick="document.getElementById('stageInfoModal').remove()" style="position:absolute; top:20px; right:20px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:20px;">&times;</button>
+        
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <div style="width:40px; height:40px; border-radius:50%; background:${actualColor}22; border:1px solid ${actualColor}55; display:flex; align-items:center; justify-content:center;">
+             ${isHighRisk ? '<img src="assets/img/lucid_heart.png" style="width:20px">' : '<img src="assets/img/lucid_monitor.png" style="width:20px">'}
+          </div>
+          <div>
+            <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">${diseaseName}</div>
+            <div style="font-size:20px; font-weight:700; color:${actualColor}">${stageStr}: ${info.title}</div>
+          </div>
+        </div>
+
+        <p style="color:var(--text-secondary); font-size:14px; line-height:1.6; margin-bottom:20px;">
+          ${info.desc}
+        </p>
+
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:16px; border-radius:12px;">
+          <div style="font-size:13px; font-weight:600; color:white; margin-bottom:12px;">Recommended Precautions</div>
+          <ul style="margin:0; padding-left:20px; color:var(--text-secondary); font-size:13px; line-height:1.6;">
+            ${info.precautions.map(p => `<li style="margin-bottom:6px;">${p}</li>`).join('')}
+          </ul>
+        </div>
+        
+        <button onclick="document.getElementById('stageInfoModal').remove()" class="btn" style="width:100%; margin-top:20px; background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1)">Understand</button>
+      </div>
+    </div>
+    <style>
+      @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+      @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    </style>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
 function adminLogout() {
   sessionStorage.clear();
   window.location.href = 'admin.html';

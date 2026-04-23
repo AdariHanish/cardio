@@ -621,7 +621,10 @@
         <span class="risk-pct" style="color:${color}">
           ${risk.toFixed(1)}%
         </span>
-        <span class="stage-badge" style="${stageClass}">
+        <span class="stage-badge" style="cursor:pointer; transition:transform 0.2s; ${stageClass}" 
+              onclick="showStageInfo('${stage}', '${name}')"
+              onmouseover="this.style.transform='scale(1.05)'"
+              onmouseout="this.style.transform='scale(1)'">
           ${stage}
         </span>
       </div>

@@ -1567,8 +1567,17 @@ function buildMiniRisk(name, risk) {
                 ${num.toFixed(1)}%
             </div>
             <div style="font-size:11px;
-                         color:var(--text-muted);
-                         margin-top:2px">
+                         color:var(--cyan);
+                         margin-top:2px;
+                         cursor:pointer;
+                         display:inline-block;
+                         background:rgba(0,229,255,0.1);
+                         padding:2px 6px;
+                         border-radius:4px;
+                         transition:transform 0.2s;"
+                 onclick="showStageInfo('${stage}', '${name}')"
+                 onmouseover="this.style.transform='scale(1.05)'"
+                 onmouseout="this.style.transform='scale(1)'">
                 ${stage}
             </div>
         </div>`;
