@@ -311,7 +311,8 @@ body::after {
   padding       : 32px;
   box-shadow    : var(--shadow-card);
   position      : relative;
-  overflow      : hidden;
+  /* Do NOT set overflow:hidden here — it blocks table-responsive scrollbars */
+  overflow      : visible;
   transition    : var(--transition);
 }
 
@@ -570,33 +571,56 @@ select.form-input {
 
 /* ── Table ── */
 .table-responsive {
-  width: 100%;
-  overflow-x: auto;
+  width          : 100%;
+  max-width      : 100%;
+  overflow-x     : auto;
+  overflow-y     : visible;
   -webkit-overflow-scrolling: touch;
+  box-sizing     : border-box;
+  /* Force the scrollbar to appear INSIDE the card */
+  display        : block;
+}
+
+/* All grid children must not overflow their column */
+.admin-grid > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .data-table {
   width           : 100%;
-
+  min-width       : 600px;  /* minimum before horizontal scroll kicks in */
   border-collapse : collapse;
+  table-layout    : auto;
 }
 
 .data-table th {
-  padding       : 14px 16px;
-  text-align    : left;
-  font-size     : 11px;
-  font-weight   : 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color         : var(--text-secondary);
-  border-bottom : 1px solid var(--border-glass);
+  padding          : 12px 14px;
+  text-align       : left;
+  font-size        : 11px;
+  font-weight      : 700;
+  text-transform   : uppercase;
+  letter-spacing   : 1px;
+  color            : var(--text-secondary);
+  border-bottom    : 1px solid var(--border-glass);
+  white-space      : nowrap;
 }
 
 .data-table td {
-  padding       : 16px;
-  font-size     : 14px;
-  border-bottom : 1px solid rgba(255,255,255,0.04);
-  transition    : var(--transition);
+  padding          : 14px;
+  font-size        : 13px;
+  border-bottom    : 1px solid rgba(255,255,255,0.04);
+  transition       : var(--transition);
+  max-width        : 200px;
+  overflow         : hidden;
+  text-overflow    : ellipsis;
+  white-space      : nowrap;
+}
+
+/* Allow action column to wrap naturally */
+.data-table td:last-child {
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .data-table tr:hover td {

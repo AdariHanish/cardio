@@ -365,9 +365,12 @@ async function openPatientModal(patientId) {
         `).join('');
     }
 
-    // Show modal
+    // Show modal immediately with patient info
     const modal = document.getElementById('patientModal');
     if (modal) modal.classList.add('show');
+
+    // Then load history automatically in background (no button click needed)
+    loadPatientHistoryInModal();
 }
 
 function closeModal() {
@@ -383,17 +386,18 @@ async function loadPatientHistoryInModal() {
 
     const histBtn = document.getElementById('checkHistoryBtn');
     const histArea = document.getElementById('modalHistoryArea');
-    const accordion = document.getElementById('historyAccordion');
 
     if (histBtn) histBtn.style.display = 'none';
-    if (histArea) histArea.style.display = 'block';
-
-    if (accordion) {
-        accordion.innerHTML = `
-            <div style="text-align:center;padding:30px">
-                <div class="spinner"></div>
-                <div style="margin-top:12px; color:var(--text-secondary)">
-                    Loading history...
+    if (histArea) {
+        histArea.style.display = 'block';
+        histArea.innerHTML = `
+            <div class="section-title" style="font-size:18px;margin-bottom:16px">
+                <img src="assets/img/lucid_monitor.png" style="width:20px; height:20px; margin-right:8px; vertical-align:middle"> Patient Health History
+            </div>
+            <div class="history-accordion" id="historyAccordion">
+                <div style="text-align:center;padding:30px">
+                    <div class="spinner"></div>
+                    <div style="margin-top:12px; color:var(--text-secondary)">Loading history...</div>
                 </div>
             </div>`;
     }
@@ -401,6 +405,8 @@ async function loadPatientHistoryInModal() {
     const data = await api.get(`/api/admin/readings?patient_id=${currentPatient.patient_id}`);
     const readings = data.readings || [];
 
+    // Re-query accordion since we replaced innerHTML above
+    const accordion = document.getElementById('historyAccordion');
     if (!accordion) return;
 
     if (!data.success) {
@@ -467,6 +473,7 @@ async function loadPatientHistoryInModal() {
         </div>`;
     }).join('');
 }
+
 
 // =============================================================
 // DELETE PATIENT — Confirmation

@@ -322,7 +322,8 @@
   async function searchPatient() {
     const query = document.getElementById('pidInput').value.trim();
     if (!query) {
-      showAlert('alertBox', 'error', 'Please enter a search term.');
+      document.getElementById('alertBox').innerHTML = '';
+      document.getElementById('resultsArea').style.display = 'none';
       return;
     }
 
@@ -332,16 +333,29 @@
       return;
     }
 
+    showAlert('alertBox', 'info', 'Searching...');
+
     try {
+      // /api/patients/search returns { success, patients:[], total }
       const data = await api.get(`/api/patients/search?q=${encodeURIComponent(query)}`);
 
-      if (!data.success || !data.patient) {
+      if (!data.success || !data.patients || data.patients.length === 0) {
         showAlert('alertBox', 'error', 'Patient not found. Check the ID or name.');
         document.getElementById('resultsArea').style.display = 'none';
         return;
       }
 
-      displayPatient(data.patient, data.readings || []);
+      // Take first match then fetch full patient + readings
+      const firstMatch = data.patients[0];
+      document.getElementById('alertBox').innerHTML = '';
+
+      // Fetch complete record with readings
+      const detail = await api.get(`/api/patients/${firstMatch.patient_id}`);
+      if (detail.success && detail.patient) {
+        displayPatient(detail.patient, detail.readings || []);
+      } else {
+        displayPatient(firstMatch, []);
+      }
 
     } catch(e) {
       showAlert('alertBox', 'error', 'Cannot connect to database.');

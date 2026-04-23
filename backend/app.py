@@ -220,6 +220,38 @@ def admin_table_data(table_name):
     
     return jsonify(db.get_table_data(table_name, page=page, search=search, sort_by=sort_by, sort_order=sort_order))
 
+@app.route('/api/admin/db/reveal')
+def admin_reveal_value():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    table = request.args.get('table', '')
+    row_id = request.args.get('id', '')
+    column = request.args.get('column', '')
+    
+    if not table or not row_id or not column:
+        return jsonify({"success": False, "message": "Missing parameters"})
+    
+    # Only allow revealing from admin table for security
+    if column not in ('password', 'token'):
+        return jsonify({"success": False, "message": "Cannot reveal this column"})
+    
+    try:
+        conn = db.get_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "DB connection failed"})
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT `{column}` FROM `{table}` WHERE id = %s", (row_id,))
+            row = cur.fetchone()
+            if row:
+                return jsonify({"success": True, "value": str(row[column])})
+            return jsonify({"success": False, "message": "Row not found"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+    finally:
+        if conn: conn.close()
+
 @app.route('/api/admin/db/tables/<table_name>/rows/<row_id>', methods=['DELETE'])
 def admin_delete_table_row(table_name, row_id):
     token = request.headers.get('X-Admin-Token', '')
