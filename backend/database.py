@@ -292,6 +292,47 @@ def get_patient_readings(patient_id):
     finally:
         conn.close()
 
+def add_patient_reading(patient_id, data):
+    """Save a new measurement reading to the database"""
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Connection failed"}
+    try:
+        with conn.cursor() as cur:
+            # Check if patient exists
+            cur.execute("SELECT id FROM patients WHERE patient_id = %s", (patient_id,))
+            if not cur.fetchone():
+                return {"success": False, "message": "Patient ID not found"}
+            
+            now = datetime.datetime.now()
+            cur.execute('''
+                INSERT INTO readings (
+                    patient_id, timestamp, heart_rate, spo2, sbp, dbp, ptt_ms,
+                    arrhythmia_risk, arrhythmia_type, heartattack_risk, 
+                    stroke_risk, hypertension_risk, overall_condition, future_risk
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                patient_id, 
+                now,
+                data.get('heart_rate', 0),
+                data.get('spo2', 0),
+                data.get('sbp', 0),
+                data.get('dbp', 0),
+                data.get('ptt_ms', 0),
+                data.get('arrhythmia_risk', 0),
+                data.get('arrhythmia_type', ''),
+                data.get('heartattack_risk', 0),
+                data.get('stroke_risk', 0),
+                data.get('hypertension_risk', 0),
+                data.get('overall_condition', ''),
+                data.get('future_risk', '')
+            ))
+            return {"success": True, "id": cur.lastrowid}
+    except Exception as e:
+        print(f"[DB ERROR] add_patient_reading: {e}")
+        return {"success": False, "message": str(e)}
+    finally:
+        conn.close()
+
 def get_patients_by_age(age):
     """Get patients within ±5 years of given age"""
     conn = get_connection()

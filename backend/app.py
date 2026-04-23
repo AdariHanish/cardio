@@ -312,6 +312,18 @@ def set_monitor_patient():
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "Patient ID missing"}), 400
 
+@app.route('/api/monitor/start', methods=['POST'])
+def start_monitor():
+    pid = (request.json or {}).get('patient_id')
+    if not pid:
+        return jsonify({"success": False, "message": "No Patient ID provided"}), 400
+    
+    # Transition device to measuring state
+    LIVE_DATA['device_state'] = 'MEASURING'
+    LIVE_DATA['countdown_remaining'] = 10 # 10 second simulation
+    LIVE_DATA['predictions_ready'] = False
+    return jsonify({"success": True})
+
 @app.route('/api/monitor/live')
 def live_data():
     return jsonify(LIVE_DATA)
@@ -319,7 +331,49 @@ def live_data():
 @app.route('/api/monitor/update', methods=['POST'])
 def update_live():
     data = request.json or {}
+    
+    # Check if we should auto-save results
+    # Save only if predictions_ready transitioned to True AND we have a patient
+    was_ready = LIVE_DATA.get('predictions_ready', False)
+    is_ready  = data.get('predictions_ready', False)
+    current_pid = LIVE_DATA.get('current_patient')
+    
     LIVE_DATA.update(data)
+    
+    if is_ready and not was_ready and current_pid:
+        preds = LIVE_DATA.get('predictions', {})
+        vitals = LIVE_DATA.get('vitals', {})
+        
+        # Determine overall condition
+        risks = [
+            preds.get('arrhythmia', {}).get('risk_pct', 0),
+            preds.get('heartattack', {}).get('risk_pct', 0),
+            preds.get('stroke', {}).get('risk_pct', 0),
+            preds.get('hypertension', {}).get('risk_pct', 0)
+        ]
+        max_risk = max(risks) if risks else 0
+        cond = "Good Overall Condition"
+        if max_risk > 70: cond = "High Risk — Consult Doctor"
+        elif max_risk > 40: cond = "Moderate — Monitor Closely"
+
+        reading_payload = {
+            "heart_rate": vitals.get('heart_rate', 0),
+            "spo2": vitals.get('spo2', 0),
+            "sbp": vitals.get('sbp', 0),
+            "dbp": 80, # Default if missing
+            "ptt_ms": vitals.get('ptt', 0),
+            "arrhythmia_risk": preds.get('arrhythmia', {}).get('risk_pct', 0),
+            "arrhythmia_type": preds.get('arrhythmia', {}).get('type', 'Normal'),
+            "heartattack_risk": preds.get('heartattack', {}).get('risk_pct', 0),
+            "stroke_risk": preds.get('stroke', {}).get('risk_pct', 0),
+            "hypertension_risk": preds.get('hypertension', {}).get('risk_pct', 0),
+            "overall_condition": cond,
+            "future_risk": preds.get('future', {}).get('overall', 'Healthy stable prediction')
+        }
+        
+        print(f"[AUTO-SAVE] Saving results for Patient {current_pid}...")
+        db.add_patient_reading(current_pid, reading_payload)
+
     return jsonify({"success": True})
 
 @app.route('/api/status')

@@ -140,6 +140,36 @@ function goHomeAndLogout(e) {
     window.location.href = 'index.html';
 }
 
+// =============================================================
+// CLINICAL HELPERS (SHARED ACROSS PAGES)
+// =============================================================
+
+function getRiskColor(v) {
+  if (v > 70) return 'var(--red)';
+  if (v > 40) return 'var(--orange)';
+  return 'var(--green)';
+}
+
+function getStage(v) {
+  if (v > 70) return 'Stage 4';
+  if (v > 60) return 'Stage 3';
+  if (v > 30) return 'Stage 2';
+  return 'Stage 1';
+}
+
+function getStageClass(v) {
+  if (v > 70) return 'stage-critical';
+  if (v > 40) return 'stage-high';
+  if (v > 20) return 'stage-medium';
+  return 'stage-low';
+}
+
+function getRiskIcon(v) {
+  if (v > 70) return '⚠️';
+  if (v > 40) return '🟡';
+  return '✅';
+}
+
 function showStageInfo(stageStr, diseaseName) {
   // Prevent duplicate modals
   if (document.getElementById('stageInfoModal')) return;

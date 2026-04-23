@@ -32,9 +32,28 @@ function setPatient() {
 
   currentPatientId = pid;
   document.getElementById('currentPatientInfo').textContent = `Active Patient: ${pid}`;
+  
+  // Enable start button
+  const startBtn = document.getElementById('startMeasureBtn');
+  if (startBtn) startBtn.disabled = false;
 
   // Notify backend
   api.post('/api/monitor/set-patient', { patient_id: pid }).catch(() => {});
+}
+
+function startMeasurement() {
+  if (!currentPatientId) return;
+  api.post('/api/monitor/start', { patient_id: currentPatientId })
+    .then(res => {
+       if (res.success) {
+         console.log("Measurement started for patient", currentPatientId);
+       }
+    });
+}
+
+function startPolling() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(fetchLiveData, 1000);
 }
 
 async function fetchLiveData() {
@@ -42,6 +61,13 @@ async function fetchLiveData() {
 
   if (data.success !== false) {
     updateDeviceStatus(data.device_state || 'IDLE');
+    
+    // REQUIRE PATIENT ID TO SHOW DATA
+    if (!currentPatientId) {
+      document.getElementById('liveStatus').textContent = 'Please set Patient ID to begin';
+      return;
+    }
+
     updateVitals(data.vitals || {});
     updateECGBuffer(data.ecg_samples || []);
 
@@ -64,7 +90,7 @@ function updateDeviceStatus(state) {
   if (state === 'OFFLINE' || state === 'IDLE') {
     badge.className = 'badge badge-offline';
     badge.innerHTML = '<span class="pulse-dot red"></span>Offline';
-    status.textContent = 'Waiting for device...';
+    status.textContent = currentPatientId ? 'Waiting for device...' : 'Set Patient ID to Begin';
     session.className  = 'badge badge-warning';
     session.textContent= 'IDLE';
   } else if (state === 'READY') {
@@ -144,6 +170,7 @@ function updatePredictions(preds) {
   ];
   const maxRisk = Math.max(...risks);
   const overallEl = document.getElementById('overallText');
+  if (!overallEl) return;
 
   if (maxRisk > 70) {
     overallEl.textContent = '⚠️ High Risk — Consult Doctor';
@@ -158,16 +185,24 @@ function updatePredictions(preds) {
 
   // Future risk
   if (preds.future) {
-    document.getElementById('futureRiskSection').style.display = 'block';
-    document.getElementById('futureRiskText').textContent =
-      preds.future.overall || '';
+    const fSect = document.getElementById('futureRiskSection');
+    const fText = document.getElementById('futureRiskText');
+    if (fSect) fSect.style.display = 'block';
+    if (fText) fText.textContent = preds.future.overall || '';
   }
+}
+
+function getProgressClass(risk) {
+  if (risk > 70) return 'progress-critical';
+  if (risk > 40) return 'progress-high';
+  if (risk > 20) return 'progress-medium';
+  return 'progress-low';
 }
 
 function updateDiseaseRow(prefix, data) {
   const risk  = data.risk_pct || 0;
-  const stage = getStage(risk);
-  const color = getRiskColor(risk);
+  const stage = typeof getStage === 'function' ? getStage(risk) : 'Stage 1';
+  const color = typeof getRiskColor === 'function' ? getRiskColor(risk) : 'var(--green)';
   const cls   = getProgressClass(risk);
 
   const valEl   = document.getElementById(`${prefix}Value`);
@@ -183,7 +218,7 @@ function updateDiseaseRow(prefix, data) {
     barEl.className   = `progress-bar-fill ${cls}`;
   }
   if (stageEl) {
-    stageEl.textContent = `${stage} (${data.type || '—'})`;
+    stageEl.textContent = `${stage} (${data.type || 'Normal'})`;
   }
 }
 

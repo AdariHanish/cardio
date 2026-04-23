@@ -1540,14 +1540,6 @@ function escStr(str) {
         .replace(/>/g, '&gt;');
 }
 
-// Define stage based on risk percentage
-function getStage(v) {
-    if (v > 70) return 'Stage 4';
-    if (v > 60) return 'Stage 3';
-    if (v > 30) return 'Stage 2';
-    return 'Stage 1';
-}
-
 // Build mini risk box for accordion history
 function buildMiniRisk(name, risk) {
     const num = parseFloat(risk) || 0;
