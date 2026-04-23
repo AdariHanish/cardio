@@ -423,6 +423,7 @@
 
   async function loadPatientById(pid) {
     document.getElementById('multiResultsArea').style.display = 'none';
+    document.getElementById('ageGroupResults').style.display = 'none';
     try {
       const detail = await api.get(`/api/patients/${pid}`);
       if (detail.success && detail.patient) {
@@ -618,10 +619,7 @@
     document.getElementById('ageGroupTable').innerHTML = html;
   }
 
-  async function loadPatientById(pid) {
-    document.getElementById('pidInput').value = pid;
-    await searchPatient();
-  }
+
 </script>
 </body>
 </html>
