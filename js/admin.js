@@ -907,12 +907,14 @@ function renderTableData(data, viewer) {
                         'white-space:nowrap';
                 } else if (col === 'password' ||
                     col === 'token') {
-                    display = `<span class="sensitive-value" data-raw="••••••••">••••••••</span>
-                               <button class="btn btn-sm" 
-                                       style="padding: 2px 6px; font-size: 10px; margin-left: 8px;"
-                                       onmousedown="revealValue('${table_name}', ${row.id}, '${col}', this)"
-                                       onmouseup="maskValue(this)"
-                                       onmouseleave="maskValue(this)">👁</button>`;
+                    display = `<div style="display:flex; align-items:center; gap:8px;">
+                                 <span class="sensitive-value" data-raw="••••••••">••••••••</span>
+                                 <button class="btn btn-sm" 
+                                         style="padding: 4px; font-size: 10px; display:flex; align-items:center; justify-content:center"
+                                         onmousedown="revealValue('${table_name}', ${row.id}, '${col}', this)"
+                                         onmouseup="maskValue(this)"
+                                         onmouseleave="maskValue(this)">👁</button>
+                               </div>`;
                     style = 'color:var(--text-muted);' +
                         'letter-spacing:1px; white-space:nowrap';
                 } else if (typeof val === 'string' &&
@@ -1081,6 +1083,37 @@ function closeTableViewer() {
     currentSearch = '';
     currentSortBy = 'id';
     currentSortOrder = 'DESC';
+}
+
+// =============================================================
+// REVEAL SECRETS
+// =============================================================
+async function revealValue(tableName, rowId, colName, btnEl) {
+    const span = btnEl.previousElementSibling;
+    const isRevealed = span.getAttribute('data-raw') !== '••••••••';
+    
+    if (isRevealed) {
+        maskValue(btnEl);
+        return;
+    }
+    
+    const res = await api.get(`/api/admin/db/reveal?table=${tableName}&id=${rowId}&column=${colName}`);
+    if (res.success) {
+        span.textContent = res.value;
+        span.setAttribute('data-raw', res.value);
+        btnEl.textContent = '🔒';
+    } else {
+        showAlert('tableDataViewer', 'error', 'Failed to retrieve sensitive value');
+    }
+}
+
+function maskValue(btnEl) {
+    if (!btnEl) return;
+    const span = btnEl.previousElementSibling;
+    if (!span) return;
+    span.textContent = '••••••••';
+    span.setAttribute('data-raw', '••••••••');
+    btnEl.textContent = '👁';
 }
 
 // =============================================================

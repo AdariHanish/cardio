@@ -745,10 +745,7 @@ select.form-input {
 
   .mobile-toggle { display : block; }
 
-  .admin-grid { grid-template-columns: 1fr; }
   .admin-sidebar { 
-    position: relative; 
-    top: 0; 
     margin-bottom: 24px; 
   }
   .sidebar-menu { 
@@ -773,8 +770,14 @@ select.form-input {
   .section-title { font-size: 20px; }
 
   .db-stats { grid-template-columns: 1fr; }
-  .admin-search-bar { flex-direction: column; align-items: stretch; }
-  .admin-search-bar .form-input, .admin-search-bar .search-filter { width: 100%; }
+  
+  .admin-grid { grid-template-columns: 1fr; }
+  .admin-sidebar { 
+    position: relative; 
+    top: 0; 
+  }
+  .admin-search-bar { align-items: stretch; }
+
 }
 
 @media (max-width: 600px) {

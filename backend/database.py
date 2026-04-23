@@ -349,31 +349,24 @@ def get_active_patients(query='', page=1, per_page=50):
     try:
         with conn.cursor() as cur:
             q_str = f"%{query}%"
-            where_clause = "HAVING reading_count > 0"
-            if query:
-                where_clause = f"WHERE (p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s) {where_clause}"
-            
-            # Subquery for total count is needed for HAVING
+
+            # Execute safe distinct row count using INNER JOIN logic to naturally omit 0-reading patients
             cur.execute(f'''
-                SELECT COUNT(*) as count FROM (
-                    SELECT p.id, COUNT(r.id) as reading_count
-                    FROM patients p
-                    LEFT JOIN readings r ON p.patient_id = r.patient_id
-                    {f"WHERE p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s" if query else ""}
-                    GROUP BY p.id
-                    HAVING reading_count > 0
-                ) as active_pts
+                SELECT COUNT(DISTINCT p.id) as count
+                FROM patients p
+                INNER JOIN readings r ON p.patient_id = r.patient_id
+                {f"WHERE p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s" if query else ""}
             ''', (q_str, q_str, q_str) if query else ())
             total = cur.fetchone()['count']
 
             offset = (page - 1) * per_page
+            # Standard compliant fetch using INNER JOIN instead of post-HAVING filters
             cur.execute(f'''
                 SELECT p.*, COUNT(r.id) AS reading_count, MAX(r.timestamp) AS last_visit
                 FROM   patients p
-                LEFT JOIN readings r ON p.patient_id = r.patient_id
+                INNER JOIN readings r ON p.patient_id = r.patient_id
                 {f"WHERE p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s" if query else ""}
                 GROUP  BY p.id
-                HAVING reading_count > 0
                 ORDER  BY last_visit DESC
                 LIMIT %s OFFSET %s
             ''', ( (q_str, q_str, q_str, per_page, offset) if query else (per_page, offset) ))
