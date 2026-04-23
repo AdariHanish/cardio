@@ -1596,3 +1596,46 @@ function getConditionStyle(condition) {
         'border:1px solid rgba(0,230,118,0.2);' +
         'color:var(--green)';
 }
+// =============================================================
+// TODAY'S READINGS MODAL
+// =============================================================
+async function openTodaysReadingsModal() {
+    const modal = document.getElementById('todaysReadingsModal');
+    if (modal) modal.classList.add('show');
+    
+    const tbody = document.getElementById('todaysReadingsTableBody');
+    if (tbody) {
+        tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:30px; color:var(--text-muted)'><div class='spinner'></div><div style='margin-top:12px'>Loading today's readings...</div></td></tr>";
+    }
+
+    const data = await api.get('/api/admin/readings/today');
+    if (data.success) {
+        const readings = data.readings || [];
+        if (readings.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:var(--text-muted);padding:40px'> No readings found for today.</td></tr>";
+            return;
+        }
+
+        tbody.innerHTML = readings.map(r => 
+            <tr style="cursor:pointer" onclick="closeTodaysReadingsModal(); openPatientModal('${r.patient_id}')">
+                <td class="text-cyan" style="font-weight:700">${r.patient_id || '—'}</td>
+                <td style="font-weight:600">${r.name || '—'}</td>
+                <td>${r.age || '—'} yrs</td>
+                <td>${r.gender || '—'}</td>
+                <td style="color:var(--text-secondary);font-size:12px">${formatTimestamp(r.timestamp)}</td>
+                <td style="text-align:center">
+                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); closeTodaysReadingsModal(); openPatientModal('${r.patient_id}')">
+                        View Patient
+                    </button>
+                </td>
+            </tr>
+        ).join('');
+    } else {
+        if (tbody) tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:var(--red);padding:40px'> Error: ${data.message}</td></tr>";
+    }
+}
+
+function closeTodaysReadingsModal() {
+    const modal = document.getElementById('todaysReadingsModal');
+    if (modal) modal.classList.remove('show');
+}

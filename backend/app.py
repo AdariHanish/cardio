@@ -185,6 +185,14 @@ def admin_readings():
     page = int(request.args.get('page', 1))
     return jsonify(db.get_active_patients(query=q, page=page))
 
+@app.route('/api/admin/readings/today')
+def admin_todays_readings():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    return jsonify(db.get_todays_readings())
+
 @app.route('/api/admin/db/tables')
 def admin_tables():
     try:

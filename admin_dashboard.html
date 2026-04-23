@@ -320,10 +320,10 @@
                   id="statReadings">—</span>
             <div class="stat-label">Total Readings</div>
           </div>
-          <div class="glass-card stat-card">
+          <div class="glass-card stat-card" style="cursor: pointer; transition: var(--transition);" onmouseover="this.style.boxShadow='0 0 15px rgba(0,229,255,0.2)';" onmouseout="this.style.boxShadow='none';" onclick="openTodaysReadingsModal()">
             <span class="stat-value text-cyan"
                   id="statToday">—</span>
-            <div class="stat-label">Today's Readings</div>
+            <div class="stat-label">Today's Readings (Click to view)</div>
           </div>
         </div>
 
@@ -484,6 +484,40 @@
         </div>
 
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Today's Readings Modal -->
+<div class="modal-overlay" id="todaysReadingsModal">
+  <div class="modal-box" style="max-width: 850px;">
+    <button class="modal-close" onclick="closeTodaysReadingsModal()">✕</button>
+
+    <div class="section-title mb-3">
+      <img src="assets/img/lucid_monitor.png" style="width:24px; height:24px; vertical-align:middle; margin-right:8px"> Today's Readings
+    </div>
+
+    <div class="table-responsive" style="margin-top: 20px;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Patient ID</th>
+            <th>Name</th>
+            <th>Age</th>
+            <th>Gender</th>
+            <th>Time of Reading</th>
+            <th style="text-align:center">Action</th>
+          </tr>
+        </thead>
+        <tbody id="todaysReadingsTableBody">
+          <tr>
+            <td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted)">
+              <div class="spinner"></div>
+              <div style="margin-top:12px">Loading today's readings...</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

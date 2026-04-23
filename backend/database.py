@@ -723,3 +723,23 @@ def get_table_data(table_name, page=1, per_page=50, search='', sort_by='id', sor
             return {"success": True, "table_name": table_name, "columns": columns, "rows": rows, "total_rows": total_rows, "page": page, "per_page": per_page, "total_pages": total_pages}
     finally:
         conn.close()
+def get_todays_readings():
+    "Get all readings taken today with patient details"
+    conn = get_connection()
+    if not conn: return {"success": False, "readings": []}
+    try:
+        with conn.cursor() as cur:
+            today = datetime.date.today()
+            cur.execute('''
+                SELECT r.id as reading_id, r.patient_id, r.timestamp, p.name, p.age, p.gender
+                FROM readings r
+                LEFT JOIN patients p ON r.patient_id = p.patient_id
+                WHERE DATE(r.timestamp) = %s
+                ORDER BY r.timestamp DESC
+            ''', (today,))
+            rows = cur.fetchall()
+            for r in rows:
+                if r['timestamp']: r['timestamp'] = str(r['timestamp'])
+            return {"success": True, "readings": rows}
+    finally:
+        conn.close()

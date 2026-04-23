@@ -1,6 +1,0 @@
-flask
-flask-cors
-python-dotenv
-pymysql
-cryptography
-certifi

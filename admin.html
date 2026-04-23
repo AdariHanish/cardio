@@ -125,7 +125,7 @@
 
         <button type="submit" class="btn btn-primary btn-lg btn-block"
                 id="loginBtn">
-          🔓 Access Dashboard
+          🔒 Access Dashboard
         </button>
       </form>
 
@@ -163,7 +163,16 @@
       if (data.success) {
         sessionStorage.setItem('adminToken', data.token);
         sessionStorage.setItem('adminUser',  user);
-        window.location.href = 'admin_dashboard.html';
+        
+        btn.textContent = '🔓 Dashboard Unlocked...';
+        btn.style.background = 'linear-gradient(135deg, #00E676, #00BFA5)'; // Turn green on success
+        btn.style.color = 'white';
+        btn.style.border = 'none';
+        
+        setTimeout(() => {
+            window.location.href = 'admin_dashboard.html';
+        }, 800);
+        return;
       } else {
         showAlert('alertBox', 'error', data.message || 'Invalid credentials. Access denied.');
       }
@@ -172,7 +181,7 @@
     }
 
     btn.disabled    = false;
-    btn.textContent = '🔓 Access Dashboard';
+    btn.textContent = '🔒 Access Dashboard';
   }
 </script>
 </body>
