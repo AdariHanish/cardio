@@ -493,6 +493,7 @@
       try {
         const detail = await api.get(`/api/patients/${pid}`);
         if (detail.success && detail.patient) {
+          document.getElementById('alertBox').innerHTML = '';
           displayPatient(detail.patient, detail.readings || []);
         } else {
           showAlert('alertBox', 'error', 'Could not load patient details.');
@@ -503,6 +504,7 @@
     }
 
     function displayPatient(patient, readings) {
+      document.getElementById('alertBox').innerHTML = '';
       document.getElementById('ageGroupResults').style.display = 'none';
       document.getElementById('resultsArea').style.display = 'block';
 
