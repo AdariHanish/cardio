@@ -112,31 +112,6 @@ function getRiskColor(pct) {
   return 'var(--green)';
 }
 
-function getStageClass(v) {
-  if (v > 70) return 'background:rgba(255,68,68,0.2);color:var(--red)';
-  if (v > 40) return 'background:rgba(255,152,0,0.2);color:var(--orange)';
-  return 'background:rgba(0,230,118,0.2);color:var(--green)';
-}
-
-function getStage(v) {
-  if (v > 70) return 'Stage 4';
-  if (v > 60) return 'Stage 3';
-  if (v > 30) return 'Stage 2';
-  return 'Stage 1';
-}
-
-function getConditionClass(max) {
-  if (max > 70) return 'condition-high';
-  if (max > 40) return 'condition-moderate';
-  return 'condition-good';
-}
-
-function getConditionText(max) {
-  if (max > 70) return 'High Risk — Consult Doctor';
-  if (max > 40) return 'Moderate — Monitor Closely';
-  return 'Good Overall Condition';
-}
-
 function formatTimestamp(ts) {
   if (!ts) return '—';
   try {

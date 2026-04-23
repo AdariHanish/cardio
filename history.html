@@ -47,6 +47,141 @@
       margin-bottom: 6px;
     }
 
+    .patient-tags {
+      display : flex;
+      gap     : 8px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      padding       : 3px 10px;
+      border-radius : 12px;
+      font-size     : 12px;
+      background    : rgba(255,255,255,0.08);
+      color         : var(--text-secondary);
+    }
+
+    /* Reading Card */
+    .reading-card {
+      margin-bottom : 20px;
+      border-left   : 3px solid var(--cyan);
+      animation     : fadeInUp 0.5s ease;
+    }
+
+    .reading-header {
+      display         : flex;
+      justify-content : space-between;
+      align-items     : center;
+      margin-bottom   : 16px;
+    }
+
+    .reading-date {
+      font-size   : 13px;
+      color       : var(--text-secondary);
+    }
+
+    /* Disease Risk Row */
+    .disease-grid {
+      display               : grid;
+      grid-template-columns : 1fr 1fr;
+      gap                   : 16px;
+      margin-bottom         : 16px;
+    }
+
+    .disease-row {
+      padding       : 14px 16px;
+      background    : rgba(255,255,255,0.03);
+      border-radius : 12px;
+      border        : 1px solid rgba(255,255,255,0.06);
+    }
+
+    .disease-name {
+      font-size     : 12px;
+      color         : var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom : 8px;
+    }
+
+    .disease-risk {
+      display         : flex;
+      align-items     : center;
+      justify-content : space-between;
+      margin-bottom   : 6px;
+    }
+
+    .risk-pct {
+      font-size   : 22px;
+      font-weight : 700;
+    }
+
+    .stage-badge {
+      padding       : 3px 10px;
+      border-radius : 10px;
+      font-size     : 12px;
+      font-weight   : 600;
+    }
+
+    /* Condition Banner */
+    .condition-banner {
+      padding       : 14px 20px;
+      border-radius : 12px;
+      text-align    : center;
+      font-weight   : 600;
+      font-size     : 15px;
+      margin-top    : 10px;
+    }
+
+    .condition-good {
+      background : rgba(0,230,118,0.1);
+      color      : var(--green);
+      border     : 1px solid rgba(0,230,118,0.2);
+    }
+
+    .condition-moderate {
+      background : rgba(255,152,0,0.1);
+      color      : var(--orange);
+      border     : 1px solid rgba(255,152,0,0.2);
+    }
+
+    .condition-high {
+      background : rgba(255,68,68,0.1);
+      color      : var(--red);
+      border     : 1px solid rgba(255,68,68,0.2);
+    }
+
+    /* History Timeline */
+    .timeline {
+      position      : relative;
+      padding-left  : 30px;
+    }
+
+    .timeline::before {
+      content      : '';
+      position     : absolute;
+      left         : 10px; top : 0; bottom : 0;
+      width        : 2px;
+      background   : linear-gradient(180deg,
+        var(--cyan), transparent
+      );
+    }
+
+    .timeline-item {
+      position      : relative;
+      margin-bottom : 24px;
+    }
+
+    .timeline-dot {
+      position      : absolute;
+      left          : -25px;
+      top           : 6px;
+      width         : 12px;
+      height        : 12px;
+      border-radius : 50%;
+      background    : var(--cyan);
+      box-shadow    : 0 0 10px var(--cyan-glow);
+    }
+
     @keyframes fadeInUp {
       from { opacity:0; transform:translateY(15px); }
       to   { opacity:1; transform:translateY(0); }
@@ -271,8 +406,25 @@
     const str = reading.stroke_risk || 0;
     const max = Math.max(arr, ha, htn, str);
 
-    const condClass = getConditionClass(max);
-    const condText  = getConditionText(max);
+    const condClass = max > 70 ? 'condition-high' :
+                      max > 40 ? 'condition-moderate' : 'condition-good';
+    const condText  = max > 70 ? 'High Risk — Consult Doctor' :
+                      max > 40 ? 'Moderate — Monitor Closely' :
+                                 'Good Overall Condition';
+
+    const getRiskColor = (v) =>
+      v > 70 ? 'var(--red)' :
+      v > 40 ? 'var(--orange)' : 'var(--green)';
+
+    const getStageClass = (v) =>
+      v > 70 ? 'background:rgba(255,68,68,0.2);color:var(--red)' :
+      v > 40 ? 'background:rgba(255,152,0,0.2);color:var(--orange)' :
+               'background:rgba(0,230,118,0.2);color:var(--green)';
+
+    const getStage = (v) =>
+      v > 70 ? 'Stage 4' :
+      v > 60 ? 'Stage 3' :
+      v > 30 ? 'Stage 2' : 'Stage 1';
 
     return `
     <div class="timeline-item">

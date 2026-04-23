@@ -244,7 +244,7 @@ def search_patients(query, page=1, per_page=10):
                    OR  LOWER(p.name) LIKE LOWER(%s)
                    OR  p.contact LIKE %s
                 GROUP  BY p.id
-                ORDER  BY p.registered_on ASC
+                ORDER  BY p.registered_on DESC
                 LIMIT %s OFFSET %s
             ''', (q, q, q, per_page, offset))
             
@@ -284,7 +284,7 @@ def get_patient_readings(patient_id):
     if not conn: return []
     try:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM readings WHERE patient_id = %s ORDER BY timestamp ASC', (patient_id,))
+            cur.execute('SELECT * FROM readings WHERE patient_id = %s ORDER BY timestamp DESC', (patient_id,))
             rows = cur.fetchall()
             for r in rows:
                 if r['timestamp']: r['timestamp'] = str(r['timestamp'])
@@ -331,7 +331,7 @@ def get_all_patients(query='', page=1, per_page=50):
                 FROM   patients p
                 LEFT JOIN readings r ON p.patient_id = r.patient_id
                 GROUP  BY p.id
-                ORDER  BY p.registered_on ASC
+                ORDER  BY p.registered_on DESC
                 LIMIT %s OFFSET %s
             ''', (per_page, offset))
             rows = cur.fetchall()
@@ -367,7 +367,7 @@ def get_active_patients(query='', page=1, per_page=50):
                 INNER JOIN readings r ON p.patient_id = r.patient_id
                 {f"WHERE p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s" if query else ""}
                 GROUP  BY p.id
-                ORDER  BY last_visit ASC
+                ORDER  BY last_visit DESC
                 LIMIT %s OFFSET %s
             ''', ( (q_str, q_str, q_str, per_page, offset) if query else (per_page, offset) ))
             
@@ -389,7 +389,7 @@ def get_all_readings(page=1, per_page=100):
             total = cur.fetchone()['count']
             
             offset = (page - 1) * per_page
-            cur.execute('SELECT * FROM readings ORDER BY timestamp ASC LIMIT %s OFFSET %s', (per_page, offset))
+            cur.execute('SELECT * FROM readings ORDER BY timestamp DESC LIMIT %s OFFSET %s', (per_page, offset))
             rows = cur.fetchall()
             for r in rows:
                 if r['timestamp']: r['timestamp'] = str(r['timestamp'])

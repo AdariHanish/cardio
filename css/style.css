@@ -25,9 +25,9 @@
   --text-muted    : #445566;
   --shadow-glow   : 0 0 30px rgba(0, 229, 255, 0.15);
   --shadow-card   : 0 8px 32px rgba(0, 0, 0, 0.4);
-  --radius-card   : 24px;
-  --radius-btn    : 14px;
-  --transition    : all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --radius-card   : 20px;
+  --radius-btn    : 12px;
+  --transition    : all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Reset ── */
@@ -46,30 +46,6 @@ body {
   min-height       : 100vh;
   overflow-x       : hidden;
   position         : relative;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* ── Custom Smooth Scrollbar ── */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 229, 255, 0.1);
-  border-radius: 10px;
-  border: 1px solid rgba(0, 229, 255, 0.05);
-  transition: background 0.3s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 229, 255, 0.3);
-  box-shadow: 0 0 10px var(--cyan-glow);
 }
 
 /* ── Animated Background ── */
@@ -662,13 +638,6 @@ select.form-input {
   margin : 28px 0;
 }
 
-/* ── Settings Grid ── */
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 32px;
-}
-
 /* ── Loading Spinner ── */
 .spinner {
   width         : 40px;
@@ -902,32 +871,6 @@ select.form-input {
 .nav-search-container:hover .nav-search-icon {
   transform: rotate(180deg);
 }
-
-/* ── Common History / Modal Timeline Styles ── */
-.patient-tags { display: flex; gap: 8px; flex-wrap: wrap; }
-.tag { padding: 3px 10px; border-radius: 12px; font-size: 12px; background: rgba(255,255,255,0.08); color: var(--text-secondary); }
-
-.reading-card { margin-bottom: 20px; border-left: 3px solid var(--cyan); animation: fadeInUp 0.5s ease; width: 100%; text-align: left; background: var(--bg-card); backdrop-filter: blur(20px); border-radius: var(--radius-card); padding: 24px; box-shadow: var(--shadow-card); }
-.reading-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.reading-date { font-size: 13px; color: var(--text-secondary); }
-
-.disease-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-@media (max-width: 600px) { .disease-grid { grid-template-columns: 1fr; } }
-.disease-row { padding: 14px 16px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
-.disease-name { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-.disease-risk { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.risk-pct { font-size: 22px; font-weight: 700; color: #fff; } /* Wait, color will be inline */
-.stage-badge { padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; }
-
-.condition-banner { padding: 14px 20px; border-radius: 12px; text-align: center; font-weight: 600; font-size: 15px; margin-top: 10px; }
-.condition-good { background: rgba(0,230,118,0.1); color: var(--green); border: 1px solid rgba(0,230,118,0.2); }
-.condition-moderate { background: rgba(255,152,0,0.1); color: var(--orange); border: 1px solid rgba(255,152,0,0.2); }
-.condition-high { background: rgba(255,68,68,0.1); color: var(--red); border: 1px solid rgba(255,68,68,0.2); }
-
-.timeline { position: relative; padding-left: 30px; text-align: left; }
-.timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: linear-gradient(180deg, var(--cyan), transparent); }
-.timeline-item { position: relative; margin-bottom: 24px; }
-.timeline-dot { position: absolute; left: -25px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-dark); border: 2px solid var(--cyan); box-shadow: 0 0 10px var(--cyan); }
 
 .btn:active .lucid-svg-refresh {
   transform: rotate(360deg);
