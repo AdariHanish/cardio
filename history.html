@@ -241,7 +241,21 @@
         </div>
       <div style="margin-top:12px;font-size:12px;color:var(--text-muted);
                   text-align:center">
-        Search by ID • Name • Age (shows age group)
+        Type at least 3 characters &bull; Search by ID &bull; Name &bull; Age (shows age group)
+      </div>
+    </div>
+
+    <!-- Multi-Results List (shows all matching patients) -->
+    <div id="multiResultsArea" style="display:none">
+      <div class="glass-card">
+        <div class="flex-between mb-3">
+          <div class="section-title">
+            <svg class="lucid-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Search Results
+          </div>
+          <span class="badge badge-online" id="matchCount">0 found</span>
+        </div>
+        <div id="matchList"></div>
       </div>
     </div>
 
@@ -324,10 +338,18 @@
     if (!query) {
       document.getElementById('alertBox').innerHTML = '';
       document.getElementById('resultsArea').style.display = 'none';
+      document.getElementById('multiResultsArea').style.display = 'none';
       return;
     }
 
-    // Check if pure number → age search
+    // Minimum 3 characters required
+    if (query.length < 3) {
+      document.getElementById('alertBox').innerHTML = '';
+      document.getElementById('multiResultsArea').style.display = 'none';
+      return;
+    }
+
+    // Check if pure number → age search (only if <= 120)
     if (/^\d+$/.test(query) && parseInt(query) <= 120) {
       await searchByAge(parseInt(query));
       return;
@@ -336,29 +358,74 @@
     showAlert('alertBox', 'info', 'Searching...');
 
     try {
-      // /api/patients/search returns { success, patients:[], total }
       const data = await api.get(`/api/patients/search?q=${encodeURIComponent(query)}`);
 
       if (!data.success || !data.patients || data.patients.length === 0) {
-        showAlert('alertBox', 'error', 'Patient not found. Check the ID or name.');
+        showAlert('alertBox', 'error', 'No patients found matching your search.');
         document.getElementById('resultsArea').style.display = 'none';
+        document.getElementById('multiResultsArea').style.display = 'none';
         return;
       }
 
-      // Take first match then fetch full patient + readings
-      const firstMatch = data.patients[0];
       document.getElementById('alertBox').innerHTML = '';
+      const patients = data.patients;
 
-      // Fetch complete record with readings
-      const detail = await api.get(`/api/patients/${firstMatch.patient_id}`);
-      if (detail.success && detail.patient) {
-        displayPatient(detail.patient, detail.readings || []);
-      } else {
-        displayPatient(firstMatch, []);
+      // If only 1 result, load directly
+      if (patients.length === 1) {
+        document.getElementById('multiResultsArea').style.display = 'none';
+        await loadPatientById(patients[0].patient_id);
+        return;
       }
+
+      // Multiple results — show selection list
+      document.getElementById('resultsArea').style.display = 'none';
+      document.getElementById('ageGroupResults').style.display = 'none';
+      document.getElementById('multiResultsArea').style.display = 'block';
+      document.getElementById('matchCount').textContent = `${patients.length} found`;
+
+      const listHtml = patients.map(p => `
+        <div style="display:flex; align-items:center; justify-content:space-between; 
+                    padding:14px 18px; margin-bottom:8px;
+                    background:rgba(255,255,255,0.03); border:1px solid var(--border-glass);
+                    border-radius:12px; cursor:pointer; transition:var(--transition)"
+             onclick="loadPatientById('${p.patient_id}')"
+             onmouseover="this.style.borderColor='var(--cyan)';this.style.background='rgba(0,229,255,0.06)'"
+             onmouseout="this.style.borderColor='var(--border-glass)';this.style.background='rgba(255,255,255,0.03)'">
+          <div style="display:flex; align-items:center; gap:14px">
+            <div style="width:42px;height:42px;border-radius:50%;
+                        background:linear-gradient(135deg,#00b4d8,#0077b6);
+                        display:flex;align-items:center;justify-content:center">
+              <img src="assets/img/lucid_patient.png" style="width:20px">
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:15px">${p.name}</div>
+              <div style="font-size:12px;color:var(--text-secondary)">
+                ID: ${p.patient_id} &bull; ${p.age} yrs &bull; ${p.gender} &bull; ${p.reading_count || 0} readings
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-outline btn-sm">View Details →</button>
+        </div>
+      `).join('');
+
+      document.getElementById('matchList').innerHTML = listHtml;
 
     } catch(e) {
       showAlert('alertBox', 'error', 'Cannot connect to database.');
+    }
+  }
+
+  async function loadPatientById(pid) {
+    document.getElementById('multiResultsArea').style.display = 'none';
+    try {
+      const detail = await api.get(`/api/patients/${pid}`);
+      if (detail.success && detail.patient) {
+        displayPatient(detail.patient, detail.readings || []);
+      } else {
+        showAlert('alertBox', 'error', 'Could not load patient details.');
+      }
+    } catch(e) {
+      showAlert('alertBox', 'error', 'Connection error.');
     }
   }
 

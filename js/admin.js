@@ -10,9 +10,14 @@ let searchTimeout;
 
 function debounceSearch(type) {
     clearTimeout(searchTimeout);
+    // Get the right input based on type
+    const inputId = type === 'readings' ? 'readingsSearchInput' : 'adminSearchInput';
+    const val = document.getElementById(inputId)?.value?.trim() || '';
+    // Require minimum 3 characters before searching
+    if (val.length > 0 && val.length < 3) return;
     searchTimeout = setTimeout(() => {
         executeSearch(type);
-    }, 400); // 400ms delay for auto-search
+    }, 400);
 }
 
 // =============================================================
@@ -25,7 +30,7 @@ let currentTableName = null;
 let currentTablePage = 1;
 let currentSearch = '';
 let currentSortBy = 'id';
-let currentSortOrder = 'DESC';
+let currentSortOrder = 'ASC';
 
 // Pagination State
 let patientsPage = 1;

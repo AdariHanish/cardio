@@ -158,9 +158,12 @@ let globalSearchTimeout;
 
 function debounceGlobalSearch() {
   clearTimeout(globalSearchTimeout);
+  const val = document.getElementById('globalSearchInput')?.value?.trim() || '';
+  // Require minimum 3 characters before searching
+  if (val.length > 0 && val.length < 3) return;
   globalSearchTimeout = setTimeout(() => {
       executeGlobalSearch();
-  }, 500); // 500ms delay to prevent rapid redirects
+  }, 500);
 }
 
 async function executeGlobalSearch() {

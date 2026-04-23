@@ -6,6 +6,13 @@
 /* ── Google Fonts ── */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* ── Smooth Scrolling + Performance ── */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* ── CSS Variables ── */
 :root {
   --bg-primary    : #020818;
@@ -37,7 +44,7 @@
   box-sizing : border-box;
 }
 
-html { scroll-behavior: smooth; }
+
 
 body {
   font-family      : 'Inter', sans-serif;

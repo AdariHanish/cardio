@@ -244,7 +244,7 @@ def search_patients(query, page=1, per_page=10):
                    OR  LOWER(p.name) LIKE LOWER(%s)
                    OR  p.contact LIKE %s
                 GROUP  BY p.id
-                ORDER  BY p.registered_on DESC
+                ORDER  BY p.registered_on ASC
                 LIMIT %s OFFSET %s
             ''', (q, q, q, per_page, offset))
             
@@ -331,7 +331,7 @@ def get_all_patients(query='', page=1, per_page=50):
                 FROM   patients p
                 LEFT JOIN readings r ON p.patient_id = r.patient_id
                 GROUP  BY p.id
-                ORDER  BY p.registered_on DESC
+                ORDER  BY p.id ASC
                 LIMIT %s OFFSET %s
             ''', (per_page, offset))
             rows = cur.fetchall()
@@ -367,7 +367,7 @@ def get_active_patients(query='', page=1, per_page=50):
                 INNER JOIN readings r ON p.patient_id = r.patient_id
                 {f"WHERE p.patient_id LIKE %s OR LOWER(p.name) LIKE LOWER(%s) OR p.contact LIKE %s" if query else ""}
                 GROUP  BY p.id
-                ORDER  BY last_visit DESC
+                ORDER  BY p.id ASC
                 LIMIT %s OFFSET %s
             ''', ( (q_str, q_str, q_str, per_page, offset) if query else (per_page, offset) ))
             
