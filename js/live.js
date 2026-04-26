@@ -31,7 +31,10 @@ function setPatient() {
   if (!pid) return;
 
   const btn = document.querySelector('button[onclick="setPatient()"]');
+  const startBtn = document.getElementById('startMeasureBtn');
+  
   if (btn) btn.textContent = 'Verifying...';
+  if (startBtn) startBtn.disabled = true;
 
   api.get(`/api/patients/${pid}`).then(res => {
     if (btn) btn.textContent = 'Set Patient';
@@ -41,16 +44,21 @@ function setPatient() {
       document.getElementById('currentPatientInfo').textContent = `Active Patient: ${res.patient.name} (${pid})`;
       
       // Enable start button
-      const startBtn = document.getElementById('startMeasureBtn');
       if (startBtn) startBtn.disabled = false;
 
       // Notify backend
       api.post('/api/monitor/set-patient', { patient_id: pid }).catch(() => {});
     } else {
+      currentPatientId = null;
+      document.getElementById('currentPatientInfo').textContent = 'No patient selected';
+      if (startBtn) startBtn.disabled = true;
       alert("Invalid Patient ID. Please check the ID or register the patient first.");
     }
   }).catch(() => {
     if (btn) btn.textContent = 'Set Patient';
+    currentPatientId = null;
+    document.getElementById('currentPatientInfo').textContent = 'No patient selected';
+    if (startBtn) startBtn.disabled = true;
     alert("Network error while verifying patient ID.");
   });
 }

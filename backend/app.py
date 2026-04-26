@@ -476,7 +476,7 @@ def system_status():
     
     return jsonify({
         "iot_connected": is_connected,
-        "models_loaded": True, 
+        "models_loaded": is_connected and LIVE_DATA.get('models_loaded', False), 
         "db_connected": db.get_connection() is not None,
         "ecg_detected": is_connected and len(LIVE_DATA.get('ecg_samples', [])) > 0,
         "device_state": state
