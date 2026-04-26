@@ -1091,7 +1091,7 @@ function pageBtn(tableName, p, currentPage) {
 // TABLE CONTROLS
 // =============================================================
 function debounceSearch(type) {
-    // For Admin Dashboard, we now ONLY search on Enter as per user request
+    clearTimeout(searchTimeout);
     const inputId = type === 'patients' ? 'adminSearchInput' : 'readingsSearchInput';
     const input = document.getElementById(inputId);
     
@@ -1099,13 +1099,16 @@ function debounceSearch(type) {
         input.dataset.enterBound = "true";
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
+                clearTimeout(searchTimeout);
                 executeSearch(type);
             }
         });
-        
-        // Also show a small hint that Enter is required
-        input.title = "Press Enter to search";
+        input.title = "Search auto-refreshes, or press Enter";
     }
+
+    searchTimeout = setTimeout(() => {
+        executeSearch(type);
+    }, 500);
 }
 
 function sortTable(column, order, tableName) {

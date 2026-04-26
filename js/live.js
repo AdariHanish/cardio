@@ -16,8 +16,11 @@ window.onload = function() {
   const params = new URLSearchParams(window.location.search);
   const pid    = params.get('pid');
   if (pid) {
-    document.getElementById('pidInput').value = pid;
-    setPatient();
+    const input = document.getElementById('pidInput');
+    if (input) {
+      input.value = pid;
+      debounceSetPatient();
+    }
   }
 
   // Start ECG canvas loop
