@@ -52,8 +52,14 @@ function startMeasurement() {
 }
 
 function startPolling() {
-  if (pollInterval) clearInterval(pollInterval);
-  pollInterval = setInterval(fetchLiveData, 1000);
+  if (pollInterval) clearTimeout(pollInterval);
+  fetchLiveDataLoop();
+}
+
+async function fetchLiveDataLoop() {
+  await fetchLiveData();
+  // Safe recursive ultra-fast polling (10ms)
+  pollInterval = setTimeout(fetchLiveDataLoop, 10);
 }
 
 async function fetchLiveData() {

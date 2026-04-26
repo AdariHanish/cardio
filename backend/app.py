@@ -334,6 +334,16 @@ def start_monitor():
 
 @app.route('/api/monitor/live')
 def live_data():
+    now = time.time()
+    last_ping = LIVE_DATA.get('last_ping', 0)
+    
+    # Strictly check if IoT device is alive (ping within 5 seconds)
+    if now - last_ping > 5:
+        LIVE_DATA['device_state'] = 'OFFLINE'
+        LIVE_DATA['iot_connected'] = False
+    else:
+        LIVE_DATA['iot_connected'] = True
+        
     return jsonify(LIVE_DATA)
 
 import json
@@ -444,6 +454,7 @@ def update_live():
     current_pid = LIVE_DATA.get('current_patient')
     
     LIVE_DATA.update(data)
+    LIVE_DATA['last_ping'] = time.time() # Track heartbeat from IoT device
     
     if is_ready and not was_ready and current_pid:
         print(f"[AUTO] Triggering Auto-Save for {current_pid}")
@@ -468,5 +479,5 @@ if __name__ == '__main__':
     port = int(os.getenv('FLASK_PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
     
-    print(f"🚀 CardioCare AI Server starting on http://{host}:{port}")
+    print(f"CardioCare AI Server starting on http://{host}:{port}")
     app.run(host=host, port=port, debug=debug)

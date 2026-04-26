@@ -137,7 +137,7 @@ function checkAdminAuth() {
 function goHomeAndLogout(e) {
     if (e) e.preventDefault();
     sessionStorage.clear();
-    window.location.href = 'index.html';
+    window.location.replace('index.html');
 }
 
 // =============================================================
