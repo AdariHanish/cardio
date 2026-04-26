@@ -345,7 +345,7 @@
               </svg>
             </div>
             No readings found for this patient yet.<br>
-            <a href="live_monitor.html" class="btn btn-outline mt-3">
+            <a id="noHistoryMonitorLink" href="live_monitor.html" class="btn btn-outline mt-3">
               <svg class="lucid-svg lucid-svg-sm" viewBox="0 0 24 24">
                 <path d="M5 12h14" />
                 <path d="m12 5 7 7-7 7" />
@@ -538,7 +538,10 @@
       <span class="tag">Registered: ${patient.registered_on}</span>
     `;
 
-      document.getElementById('startMonitorLink').href = `live_monitor.html?pid=${patient.patient_id}`;
+      const monitorUrl = `live_monitor.html?pid=${patient.patient_id}`;
+      document.getElementById('startMonitorLink').href = monitorUrl;
+      const noHistLink = document.getElementById('noHistoryMonitorLink');
+      if (noHistLink) noHistLink.href = monitorUrl;
 
       // Readings
       const count = readings.length;
