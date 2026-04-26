@@ -26,7 +26,26 @@ window.onload = function() {
   startPolling();
 };
 
-function setPatient() {
+let setPatientTimeout;
+function debounceSetPatient() {
+  clearTimeout(setPatientTimeout);
+  const pid = document.getElementById('pidInput').value.trim();
+  
+  if (!pid) {
+    currentPatientId = null;
+    document.getElementById('currentPatientInfo').textContent = 'No patient selected';
+    document.getElementById('currentPatientInfo').style.color = 'var(--text-secondary)';
+    const startBtn = document.getElementById('startMeasureBtn');
+    if (startBtn) startBtn.disabled = true;
+    return;
+  }
+  
+  setPatientTimeout = setTimeout(() => {
+    setPatient(true); // isAuto = true
+  }, 600);
+}
+
+function setPatient(isAuto = false) {
   const pid = document.getElementById('pidInput').value.trim();
   if (!pid) return;
 
@@ -41,6 +60,7 @@ function setPatient() {
 
     if (res.success && res.patient) {
       currentPatientId = pid;
+      document.getElementById('currentPatientInfo').style.color = 'var(--text-secondary)';
       document.getElementById('currentPatientInfo').textContent = `Active Patient: ${res.patient.name} (${pid})`;
       
       // Enable start button
@@ -50,16 +70,18 @@ function setPatient() {
       api.post('/api/monitor/set-patient', { patient_id: pid }).catch(() => {});
     } else {
       currentPatientId = null;
-      document.getElementById('currentPatientInfo').textContent = 'No patient selected';
+      document.getElementById('currentPatientInfo').style.color = 'var(--red)';
+      document.getElementById('currentPatientInfo').textContent = '❌ Invalid Patient ID';
       if (startBtn) startBtn.disabled = true;
-      alert("Invalid Patient ID. Please check the ID or register the patient first.");
+      if (!isAuto) alert("Invalid Patient ID. Please check the ID or register the patient first.");
     }
   }).catch(() => {
     if (btn) btn.textContent = 'Set Patient';
     currentPatientId = null;
+    document.getElementById('currentPatientInfo').style.color = 'var(--text-secondary)';
     document.getElementById('currentPatientInfo').textContent = 'No patient selected';
     if (startBtn) startBtn.disabled = true;
-    alert("Network error while verifying patient ID.");
+    if (!isAuto) alert("Network error while verifying patient ID.");
   });
 }
 
