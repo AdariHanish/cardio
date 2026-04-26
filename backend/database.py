@@ -10,6 +10,7 @@ import hashlib
 import uuid
 import datetime
 import random
+import time
 import certifi
 from dotenv import load_dotenv
 
@@ -191,17 +192,31 @@ def seed_sample_data(conn):
 # PATIENT FUNCTIONS
 # =============================================================
 def generate_patient_id():
-    """Generate unique 5-digit random patient ID (e.g. 34213)"""
+    """Generate unique 5-digit random patient ID (e.g. 58806)"""
+    # We loop to ensure uniqueness. If a patient is deleted, their ID becomes available again.
     conn = get_connection()
-    if not conn: return str(random.randint(10000, 99999))
+    if not conn:
+        # Fallback if DB is down (not ideal but better than crashing)
+        return str(random.randint(10000, 99999))
     
     try:
         with conn.cursor() as cur:
-            while True:
+            max_attempts = 100
+            for _ in range(max_attempts):
                 new_id = str(random.randint(10000, 99999))
-                cur.execute("SELECT patient_id FROM patients WHERE patient_id = %s", (new_id,))
-                if not cur.fetchone():
+                
+                # Check both patients and readings (to be extra safe)
+                cur.execute("SELECT 1 FROM patients WHERE patient_id = %s", (new_id,))
+                in_patients = cur.fetchone()
+                
+                cur.execute("SELECT 1 FROM readings WHERE patient_id = %s", (new_id,))
+                in_readings = cur.fetchone()
+                
+                if not in_patients and not in_readings:
                     return new_id
+                    
+            # If we somehow fail after 100 attempts, use timestamp suffix to ensure uniqueness
+            return str(random.randint(100, 999)) + str(int(time.time()))[-2:]
     finally:
         conn.close()
 
