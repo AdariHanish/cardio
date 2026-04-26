@@ -308,6 +308,23 @@ def admin_reveal():
         return jsonify({"success": True, "value": val})
     return jsonify({"success": False, "message": "Value not found or forbidden"}), 404
 
+@app.route('/api/admin/update-creds', methods=['POST'])
+def admin_update_creds():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json or {}
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({"success": False, "message": "Missing username or password"}), 400
+        
+    if db.update_credentials(token, username, password):
+        return jsonify({"success": True})
+    return jsonify({"success": False, "message": "Failed to update database"}), 500
+
 # =============================================================
 # ── SECTION 4: MONITOR & IOT ─────────────────────────────────
 # =============================================================
