@@ -1616,12 +1616,12 @@ async function openTodaysReadingsModal() {
             return;
         }
 
-        tbody.innerHTML = readings.map(r => 
+        tbody.innerHTML = readings.map(r => `
             <tr style="cursor:pointer" onclick="closeTodaysReadingsModal(); openPatientModal('${r.patient_id}')">
-                <td class="text-cyan" style="font-weight:700">${r.patient_id || '—'}</td>
-                <td style="font-weight:600">${r.name || '—'}</td>
-                <td>${r.age || '—'} yrs</td>
-                <td>${r.gender || '—'}</td>
+                <td class="text-cyan" style="font-weight:700">${r.patient_id || ''}</td>
+                <td style="font-weight:600">${r.name || ''}</td>
+                <td>${r.age || ''} yrs</td>
+                <td>${r.gender || ''}</td>
                 <td style="color:var(--text-secondary);font-size:12px">${formatTimestamp(r.timestamp)}</td>
                 <td style="text-align:center">
                     <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); closeTodaysReadingsModal(); openPatientModal('${r.patient_id}')">
@@ -1629,9 +1629,9 @@ async function openTodaysReadingsModal() {
                     </button>
                 </td>
             </tr>
-        ).join('');
+        `).join('');
     } else {
-        if (tbody) tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:var(--red);padding:40px'> Error: ${data.message}</td></tr>";
+        if (tbody) tbody.innerHTML = `<tr><td colspan='6' style='text-align:center;color:var(--red);padding:40px'> Error: ${data.message}</td></tr>`;
     }
 }
 

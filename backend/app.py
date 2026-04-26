@@ -464,10 +464,21 @@ def update_live():
 
 @app.route('/api/status')
 def system_status():
+    now = time.time()
+    last_ping = LIVE_DATA.get('last_ping', 0)
+    
+    if now - last_ping > 5:
+        LIVE_DATA['device_state'] = 'OFFLINE'
+        LIVE_DATA['iot_connected'] = False
+        
     state = LIVE_DATA.get('device_state', 'IDLE')
+    is_connected = state not in ['IDLE', 'OFFLINE']
+    
     return jsonify({
-        "iot_connected": state != 'IDLE',
-        "db_connected": True,
+        "iot_connected": is_connected,
+        "models_loaded": True, 
+        "db_connected": db.get_connection() is not None,
+        "ecg_detected": is_connected and len(LIVE_DATA.get('ecg_samples', [])) > 0,
         "device_state": state
     })
 
