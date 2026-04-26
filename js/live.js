@@ -8,6 +8,7 @@ let pollInterval     = null;
 let ecgData          = [];
 let animFrame        = null;
 const ECG_MAX_POINTS = 300;
+let isMeasurementStarted = false;
 
 // Initialize on page load
 window.onload = function() {
@@ -52,6 +53,8 @@ function resetMonitorUI() {
 
   const cdSect = document.getElementById('countdownSection');
   if (cdSect) cdSect.style.display = 'none';
+  
+  isMeasurementStarted = false;
 }
 
 let setPatientTimeout;
@@ -113,6 +116,7 @@ function startMeasurement() {
   api.post('/api/monitor/start', { patient_id: currentPatientId })
     .then(res => {
        if (res.success) {
+         isMeasurementStarted = true;
          console.log("Measurement started for patient", currentPatientId);
        }
     });
@@ -147,7 +151,8 @@ async function fetchLiveData() {
     if (data.predictions && data.predictions_ready) {
       updatePredictions(data.predictions);
       updateCountdown(0);
-    } else if (data.countdown_remaining > 0) {
+      isMeasurementStarted = false; // Reset flag once predictions are done
+    } else if (isMeasurementStarted && data.countdown_remaining > 0) {
       updateCountdown(data.countdown_remaining);
     }
   } else {
