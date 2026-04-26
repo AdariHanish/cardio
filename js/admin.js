@@ -1079,13 +1079,25 @@ function pageBtn(tableName, p, currentPage) {
 // =============================================================
 // TABLE CONTROLS
 // =============================================================
-function debounceTableSearch(value, tableName) {
-    currentSearch = value;
+function debounceSearch(type) {
     clearTimeout(searchTimeout);
+    const inputId = type === 'patients' ? 'adminSearchInput' : 'readingsSearchInput';
+    const input = document.getElementById(inputId);
+    
+    // Handle Enter key immediately
+    if (input && !input.dataset.enterBound) {
+        input.dataset.enterBound = "true";
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimeout);
+                executeSearch(type);
+            }
+        });
+    }
+
     searchTimeout = setTimeout(() => {
-        currentTablePage = 1;
-        loadTableData(tableName, 1);
-    }, 400);
+        executeSearch(type);
+    }, 500);
 }
 
 function sortTable(column, order, tableName) {
@@ -1639,3 +1651,94 @@ function closeTodaysReadingsModal() {
     const modal = document.getElementById('todaysReadingsModal');
     if (modal) modal.classList.remove('show');
 }
+
+// =============================================================
+// ADMIN MANAGEMENT (VIEW ALL ADMINS)
+// =============================================================
+async function openAdminManager() {
+    const modal = document.getElementById('adminManagerModal');
+    if (modal) modal.classList.add('show');
+    await loadAdmins();
+}
+
+function closeAdminManager() {
+    const modal = document.getElementById('adminManagerModal');
+    if (modal) modal.classList.remove('show');
+}
+
+async function loadAdmins() {
+    const tbody = document.getElementById('adminListTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px'><div class='spinner'></div></td></tr>";
+    
+    try {
+        const data = await api.get('/api/admin/list');
+        if (!data.success) {
+            tbody.innerHTML = `<tr><td colspan='5' style='text-align:center; color:var(--red)'>${data.message || 'Failed to load admins'}</td></tr>`;
+            return;
+        }
+        
+        const admins = data.admins || [];
+        tbody.innerHTML = admins.map(a => `
+            <tr>
+                <td style="font-weight:600; color:var(--cyan)">${a.username}</td>
+                <td style="font-family:monospace; font-size:11px; color:var(--text-muted)">
+                    ${a.password.substring(0, 16)}...
+                </td>
+                <td style="text-align:center">
+                    <span class="badge badge-online" style="background:rgba(0,229,255,0.1); color:var(--cyan)">
+                        ${a.update_count || 0} times
+                    </span>
+                </td>
+                <td style="font-size:12px; color:var(--text-secondary)">
+                    ${formatTimestamp(a.created_at)}
+                </td>
+                <td style="text-align:center">
+                    ${a.username.toLowerCase() === 'hanish' ? 
+                        '<span style="font-size:11px; color:var(--text-muted)">Protected</span>' : 
+                        `<button class="btn btn-sm" style="background:rgba(255,68,68,0.1); color:var(--red); border:1px solid rgba(255,68,68,0.2)"
+                                 onclick="deleteAdmin(${a.id}, '${a.username}')">Delete</button>`
+                    }
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; color:var(--red)'>Connection error</td></tr>";
+    }
+}
+
+async function deleteAdmin(id, username) {
+    if (!confirm(`Are you sure you want to delete administrator "${username}"?`)) return;
+    
+    try {
+        const data = await api.delete(`/api/admin/delete/${id}`);
+        if (data.success) {
+            alert(data.message);
+            await loadAdmins();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        alert('Delete failed. Check connection.');
+    }
+}
+
+// Add Enter listeners for all placeholder inputs
+document.addEventListener('DOMContentLoaded', () => {
+    const setupEnter = (id, func) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') func(); });
+    };
+
+    setupEnter('newAdminUser', updateCredentials);
+    setupEnter('newAdminPass', updateCredentials);
+    setupEnter('regAdminUser', registerNewAdmin);
+    setupEnter('regAdminPass', registerNewAdmin);
+    setupEnter('regAdminConfirm', registerNewAdmin);
+    
+    // Global search also handled in app.js, but ensure it's robust
+    setupEnter('globalSearchInput', () => {
+        if (typeof executeGlobalSearch === 'function') executeGlobalSearch();
+    });
+});

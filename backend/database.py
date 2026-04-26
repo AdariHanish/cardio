@@ -117,12 +117,22 @@ def init_database():
             # ── Admin Table ───────────────────────────────────────────
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS admin (
-                    id        INT PRIMARY KEY AUTO_INCREMENT,
-                    username  VARCHAR(100) UNIQUE NOT NULL,
-                    password  VARCHAR(255) NOT NULL,
-                    token     VARCHAR(255) DEFAULT ''
+                    id            INT PRIMARY KEY AUTO_INCREMENT,
+                    username      VARCHAR(100) UNIQUE NOT NULL,
+                    password      VARCHAR(255) NOT NULL,
+                    token         VARCHAR(255) DEFAULT '',
+                    update_count  INT DEFAULT 0,
+                    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            
+            # Ensure columns exist if table was already created
+            try:
+                cur.execute("ALTER TABLE admin ADD COLUMN update_count INT DEFAULT 0")
+            except: pass
+            try:
+                cur.execute("ALTER TABLE admin ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+            except: pass
 
             # ── Seed Admin User ───────────────────────────────────────
             admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
@@ -533,18 +543,60 @@ def verify_token(token):
         conn.close()
 
 def update_credentials(token, new_username, new_password):
-    """Update admin credentials"""
+    """Update admin credentials and increment update count"""
     if not verify_token(token): return False
     hashed = hashlib.sha256(new_password.encode()).hexdigest()
     conn = get_connection()
     if not conn: return False
     try:
         with conn.cursor() as cur:
-            cur.execute("UPDATE admin SET username = %s, password = %s WHERE token = %s", (new_username, hashed, token))
+            cur.execute("""
+                UPDATE admin 
+                SET username = %s, password = %s, update_count = update_count + 1 
+                WHERE token = %s
+            """, (new_username, hashed, token))
             return True
     except Exception as e:
         print(f"[DB] Update creds error: {e}")
         return False
+    finally:
+        conn.close()
+
+def get_all_admins(token):
+    """Retrieve all administrators (requires valid token)"""
+    if not verify_token(token): return []
+    conn = get_connection()
+    if not conn: return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, username, password, update_count, created_at FROM admin ORDER BY created_at ASC")
+            return cur.fetchall()
+    finally:
+        conn.close()
+
+def delete_admin(token, admin_id):
+    """Delete an administrator (cannot delete 'hanish')"""
+    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Connection failed"}
+    try:
+        with conn.cursor() as cur:
+            # Check username
+            cur.execute("SELECT username FROM admin WHERE id = %s", (admin_id,))
+            res = cur.fetchone()
+            if not res: return {"success": False, "message": "Admin not found"}
+            if res['username'].lower() == 'hanish':
+                return {"success": False, "message": "The main admin 'hanish' cannot be deleted."}
+            
+            # Count remaining admins
+            cur.execute("SELECT COUNT(*) as cnt FROM admin")
+            if cur.fetchone()['cnt'] <= 1:
+                return {"success": False, "message": "Cannot delete the last administrator."}
+            
+            cur.execute("DELETE FROM admin WHERE id = %s", (admin_id,))
+            return {"success": True, "message": f"Admin {res['username']} deleted successfully"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
     finally:
         conn.close()
 
@@ -574,8 +626,7 @@ def delete_patient(patient_id, token):
 def add_admin(username, password):
     """Add a new administrator"""
     conn = get_connection()
-    if not conn: return {"success": False, "message": "Database connection failed"}
-    hashed = hashlib.sha256(password.encode()).hexdigest()
+    if not conn: return {"success": False, "message": "DB Connection Error"}
     try:
         with conn.cursor() as cur:
             # Check if exists
@@ -583,8 +634,11 @@ def add_admin(username, password):
             if cur.fetchone():
                 return {"success": False, "message": "Username already exists"}
             
-            cur.execute("INSERT INTO admin (username, password) VALUES (%s, %s)", (username, hashed))
-            return {"success": True, "message": f"Admin {username} added successfully"}
+            # Hash password
+            pw_hash = hashlib.sha256(password.encode()).hexdigest()
+            cur.execute("INSERT INTO admin (username, password, created_at, update_count) VALUES (%s, %s, NOW(), 0)",
+                         (username, pw_hash))
+            return {"success": True, "message": "Admin registered successfully"}
     except Exception as e:
         return {"success": False, "message": str(e)}
     finally:

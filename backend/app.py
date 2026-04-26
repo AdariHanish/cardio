@@ -290,6 +290,20 @@ def admin_register():
         
     return jsonify(db.add_admin(username, password))
 
+@app.route('/api/admin/list', methods=['GET'])
+def admin_list():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    admins = db.get_all_admins(token)
+    return jsonify({"success": True, "admins": admins})
+
+@app.route('/api/admin/delete/<int:admin_id>', methods=['DELETE'])
+def admin_delete(admin_id):
+    token = request.headers.get('X-Admin-Token', '')
+    return jsonify(db.delete_admin(token, admin_id))
+
 @app.route('/api/admin/db/reveal')
 def admin_reveal():
     token = request.headers.get('X-Admin-Token', '')

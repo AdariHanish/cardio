@@ -299,9 +299,23 @@ let globalSearchTimeout;
 
 function debounceGlobalSearch() {
   clearTimeout(globalSearchTimeout);
-  const val = document.getElementById('globalSearchInput')?.value?.trim() || '';
+  const input = document.getElementById('globalSearchInput');
+  const val = input?.value?.trim() || '';
+  
   // Require minimum 3 characters before searching
   if (val.length > 0 && val.length < 3) return;
+  
+  // Handle Enter key immediately
+  if (input && !input.dataset.enterBound) {
+      input.dataset.enterBound = "true";
+      input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              clearTimeout(globalSearchTimeout);
+              executeGlobalSearch();
+          }
+      });
+  }
+
   globalSearchTimeout = setTimeout(() => {
       executeGlobalSearch();
   }, 500);

@@ -60,7 +60,8 @@ function resetMonitorUI() {
 let setPatientTimeout;
 function debounceSetPatient() {
   clearTimeout(setPatientTimeout);
-  const pid = document.getElementById('pidInput').value.trim();
+  const input = document.getElementById('pidInput');
+  const pid = input?.value?.trim() || '';
   
   resetMonitorUI();
   
@@ -73,6 +74,17 @@ function debounceSetPatient() {
     return;
   }
   
+  // Handle Enter key immediately
+  if (input && !input.dataset.enterBound) {
+      input.dataset.enterBound = "true";
+      input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              clearTimeout(setPatientTimeout);
+              setPatient(true);
+          }
+      });
+  }
+
   document.getElementById('currentPatientInfo').textContent = 'Verifying...';
   
   setPatientTimeout = setTimeout(() => {

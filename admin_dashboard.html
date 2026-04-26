@@ -467,6 +467,11 @@
                       onclick="updateCredentials()">
                 Save Changes
               </button>
+              <div class="divider"></div>
+              <button class="btn btn-outline btn-block" onclick="openAdminManager()">
+                <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                View All Admins
+              </button>
             </div>
 
             <!-- RIGHT: Add New Administrator -->
@@ -583,6 +588,34 @@
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Admin Manager Modal -->
+<div class="modal-overlay" id="adminManagerModal">
+  <div class="modal-box" style="max-width: 850px;">
+    <button class="modal-close" onclick="closeAdminManager()">✕</button>
+
+    <div class="section-title mb-3">
+      <img src="assets/img/lucid_ai_brain.png" style="width:24px; height:24px; vertical-align:middle; margin-right:8px"> Administrator Management
+    </div>
+
+    <div class="table-responsive" style="margin-top: 20px;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Password (Hashed)</th>
+            <th style="text-align:center">Updates</th>
+            <th>Created At</th>
+            <th style="text-align:center">Action</th>
+          </tr>
+        </thead>
+        <tbody id="adminListTableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

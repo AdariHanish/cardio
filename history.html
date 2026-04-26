@@ -383,9 +383,12 @@
 
     function debounceSearchPatient() {
       clearTimeout(patientSearchTimeout);
-      const val = document.getElementById('pidInput').value.trim();
+      const input = document.getElementById('pidInput');
+      const val = input?.value?.trim() || '';
+      
       // Don't re-search the same query
       if (val === lastSearchedQuery) return;
+      
       // Clear results if input is cleared
       if (!val) {
         lastSearchedQuery = '';
@@ -394,8 +397,21 @@
         document.getElementById('multiResultsArea').style.display = 'none';
         return;
       }
+      
       // Need at least 3 chars
       if (val.length < 3) return;
+
+      // Handle Enter key immediately
+      if (input && !input.dataset.enterBound) {
+          input.dataset.enterBound = "true";
+          input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                  clearTimeout(patientSearchTimeout);
+                  searchPatient();
+              }
+          });
+      }
+
       patientSearchTimeout = setTimeout(() => {
         searchPatient();
       }, 500);
