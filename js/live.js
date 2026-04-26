@@ -26,10 +26,40 @@ window.onload = function() {
   startPolling();
 };
 
+function resetMonitorUI() {
+  ecgData = [];
+  const waitEl = document.getElementById('ecgWaiting');
+  if (waitEl) waitEl.style.display = 'block';
+
+  ['hrValue', 'spo2Value', 'sbpValue', 'pttValue'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '--';
+  });
+
+  updateDiseaseRow('arr', {risk_pct: 0, type: 'Waiting...'});
+  updateDiseaseRow('ha',  {risk_pct: 0, type: 'Waiting...'});
+  updateDiseaseRow('str', {risk_pct: 0, type: 'Waiting...'});
+  updateDiseaseRow('htn', {risk_pct: 0, type: 'Waiting...'});
+  
+  const overallEl = document.getElementById('overallText');
+  if (overallEl) {
+    overallEl.textContent = 'Waiting for results...';
+    overallEl.style.color = 'var(--text-secondary)';
+  }
+  
+  const fSect = document.getElementById('futureRiskSection');
+  if (fSect) fSect.style.display = 'none';
+
+  const cdSect = document.getElementById('countdownSection');
+  if (cdSect) cdSect.style.display = 'none';
+}
+
 let setPatientTimeout;
 function debounceSetPatient() {
   clearTimeout(setPatientTimeout);
   const pid = document.getElementById('pidInput').value.trim();
+  
+  resetMonitorUI();
   
   if (!pid) {
     currentPatientId = null;
@@ -40,8 +70,10 @@ function debounceSetPatient() {
     return;
   }
   
+  document.getElementById('currentPatientInfo').textContent = 'Verifying...';
+  
   setPatientTimeout = setTimeout(() => {
-    setPatient(true); // isAuto = true
+    setPatient(true);
   }, 600);
 }
 
@@ -49,24 +81,16 @@ function setPatient(isAuto = false) {
   const pid = document.getElementById('pidInput').value.trim();
   if (!pid) return;
 
-  const btn = document.querySelector('button[onclick="setPatient()"]');
   const startBtn = document.getElementById('startMeasureBtn');
-  
-  if (btn) btn.textContent = 'Verifying...';
   if (startBtn) startBtn.disabled = true;
 
   api.get(`/api/patients/${pid}`).then(res => {
-    if (btn) btn.textContent = 'Set Patient';
-
     if (res.success && res.patient) {
       currentPatientId = pid;
-      document.getElementById('currentPatientInfo').style.color = 'var(--text-secondary)';
-      document.getElementById('currentPatientInfo').textContent = `Active Patient: ${res.patient.name} (${pid})`;
+      document.getElementById('currentPatientInfo').style.color = 'var(--green)';
+      document.getElementById('currentPatientInfo').textContent = `✅ Patient Set Successfully: ${res.patient.name} (${pid})`;
       
-      // Enable start button
       if (startBtn) startBtn.disabled = false;
-
-      // Notify backend
       api.post('/api/monitor/set-patient', { patient_id: pid }).catch(() => {});
     } else {
       currentPatientId = null;
@@ -76,7 +100,6 @@ function setPatient(isAuto = false) {
       if (!isAuto) alert("Invalid Patient ID. Please check the ID or register the patient first.");
     }
   }).catch(() => {
-    if (btn) btn.textContent = 'Set Patient';
     currentPatientId = null;
     document.getElementById('currentPatientInfo').style.color = 'var(--text-secondary)';
     document.getElementById('currentPatientInfo').textContent = 'No patient selected';
