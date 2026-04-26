@@ -150,7 +150,13 @@ async function loadMore(type) {
 // =============================================================
 // RENDER PATIENTS TABLE
 // ===========================================================
-    function renderPatientsTable(patients) {
+// Check if current user is main admin
+function isMainAdmin() {
+    const user = sessionStorage.getItem('adminUser');
+    return user && user.toLowerCase() === 'hanish';
+}
+
+function renderPatientsTable(patients) {
     const tbody = document.getElementById('patientsTableBody');
     if (!tbody) return;
 
@@ -169,6 +175,7 @@ function appendPatientsTable(patients) {
 }
 
 function buildPatientRow(p) {
+    const showDelete = isMainAdmin();
     return `
         <tr style="cursor:pointer" onclick="openPatientModal('${p.patient_id}')">
             <td class="text-cyan" style="font-weight:700">${p.patient_id || '—'}</td>
@@ -181,10 +188,11 @@ function buildPatientRow(p) {
             <td>
                 <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
                     <button class="btn btn-outline btn-sm" onclick="openPatientModal('${p.patient_id}')">View</button>
+                    ${showDelete ? `
                     <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3)"
                         onclick="confirmDeletePatient('${p.patient_id}','${escStr(p.name)}',${p.reading_count || 0})">
                         Delete
-                    </button>
+                    </button>` : ''}
                 </div>
             </td>
         </tr>`;
@@ -448,6 +456,8 @@ async function loadPatientHistoryInModal() {
         const top = risks_map.reduce((prev, curr) => (prev.val > curr.val) ? prev : curr);
         const maxR = top.val;
 
+        const showDelete = isMainAdmin();
+
         return `
         <div class="accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
@@ -461,10 +471,11 @@ async function loadPatientHistoryInModal() {
                     <span style="font-size:12px; font-weight:600; color:${getRiskColor(maxR)}; background:rgba(255,255,255,0.03); padding:4px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05)">
                         ${top.name}: ${maxR.toFixed(0)}%
                     </span>
+                    ${showDelete ? `
                     <button class="btn btn-sm" style="background:rgba(255,68,68,0.15); color:var(--red); border:1px solid rgba(255,68,68,0.3); padding:4px 8px; display:flex; align-items:center"
                         onclick="event.stopPropagation(); confirmDeleteReading(${r.id}, ${i + 1})" title="Delete this reading">
                         <svg class="lucid-svg" style="width:12px; height:12px" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                    </button>
+                    </button>` : ''}
                     <span style="color:var(--text-muted); font-size:10px">▼</span>
                 </div>
             </div>
@@ -869,7 +880,7 @@ function renderTableData(data, viewer) {
             </th>`;
     });
 
-    if (!isProtected) {
+    if (!isProtected && isMainAdmin()) {
         html += `
             <th style="width:80px;text-align:center">
                 Delete
@@ -955,7 +966,7 @@ function renderTableData(data, viewer) {
             });
 
             // Delete button
-            if (!isProtected) {
+            if (!isProtected && isMainAdmin()) {
                 const displayName =
                     row.patient_id ||
                     row.name ||
@@ -1080,24 +1091,21 @@ function pageBtn(tableName, p, currentPage) {
 // TABLE CONTROLS
 // =============================================================
 function debounceSearch(type) {
-    clearTimeout(searchTimeout);
+    // For Admin Dashboard, we now ONLY search on Enter as per user request
     const inputId = type === 'patients' ? 'adminSearchInput' : 'readingsSearchInput';
     const input = document.getElementById(inputId);
     
-    // Handle Enter key immediately
     if (input && !input.dataset.enterBound) {
         input.dataset.enterBound = "true";
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                clearTimeout(searchTimeout);
                 executeSearch(type);
             }
         });
+        
+        // Also show a small hint that Enter is required
+        input.title = "Press Enter to search";
     }
-
-    searchTimeout = setTimeout(() => {
-        executeSearch(type);
-    }, 500);
 }
 
 function sortTable(column, order, tableName) {
@@ -1695,10 +1703,13 @@ async function loadAdmins() {
                     ${formatTimestamp(a.created_at)}
                 </td>
                 <td style="text-align:center">
-                    ${a.username.toLowerCase() === 'hanish' ? 
-                        '<span style="font-size:11px; color:var(--text-muted)">Protected</span>' : 
-                        `<button class="btn btn-sm" style="background:rgba(255,68,68,0.1); color:var(--red); border:1px solid rgba(255,68,68,0.2)"
-                                 onclick="deleteAdmin(${a.id}, '${a.username}')">Delete</button>`
+                    ${!isMainAdmin() ? 
+                        '<span style="font-size:11px; color:var(--text-muted)">No Permission</span>' :
+                        (a.username.toLowerCase() === 'hanish' ? 
+                            '<span style="font-size:11px; color:var(--text-muted)">Protected</span>' : 
+                            `<button class="btn btn-sm" style="background:rgba(255,68,68,0.1); color:var(--red); border:1px solid rgba(255,68,68,0.2)"
+                                     onclick="deleteAdmin(${a.id}, '${a.username}')">Delete</button>`
+                        )
                     }
                 </td>
             </tr>
@@ -1724,21 +1735,45 @@ async function deleteAdmin(id, username) {
     }
 }
 
-// Add Enter listeners for all placeholder inputs
+// Add Enter listeners for Admin Dashboard: Enter to Next Field
 document.addEventListener('DOMContentLoaded', () => {
-    const setupEnter = (id, func) => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') func(); });
+    const focusNext = (currentId, nextId, finalFunc) => {
+        const current = document.getElementById(currentId);
+        if (!current) return;
+
+        current.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const next = document.getElementById(nextId);
+                if (next) {
+                    next.focus();
+                } else if (finalFunc) {
+                    finalFunc();
+                }
+            }
+        });
     };
 
-    setupEnter('newAdminUser', updateCredentials);
-    setupEnter('newAdminPass', updateCredentials);
-    setupEnter('regAdminUser', registerNewAdmin);
-    setupEnter('regAdminPass', registerNewAdmin);
-    setupEnter('regAdminConfirm', registerNewAdmin);
+    // Update Credentials Flow
+    focusNext('newAdminUser', 'newAdminPass');
+    focusNext('newAdminPass', null, updateCredentials);
+
+    // Register Admin Flow
+    focusNext('regAdminUser', 'regAdminPass');
+    focusNext('regAdminPass', 'regAdminConfirm');
+    focusNext('regAdminConfirm', null, registerNewAdmin);
     
-    // Global search also handled in app.js, but ensure it's robust
-    setupEnter('globalSearchInput', () => {
-        if (typeof executeGlobalSearch === 'function') executeGlobalSearch();
+    // Search inputs (Patient & Readings) - just call search on Enter
+    // They are already bound in debounceSearch above, but let's ensure they are set
+    ['adminSearchInput', 'readingsSearchInput'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    const type = id === 'adminSearchInput' ? 'patients' : 'readings';
+                    executeSearch(type);
+                }
+            });
+        }
     });
 });

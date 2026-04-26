@@ -467,11 +467,6 @@
                       onclick="updateCredentials()">
                 Save Changes
               </button>
-              <div class="divider"></div>
-              <button class="btn btn-outline btn-block" onclick="openAdminManager()">
-                <svg class="lucid-svg" style="width:14px; height:14px; margin-right:6px" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                View All Admins
-              </button>
             </div>
 
             <!-- RIGHT: Add New Administrator -->
@@ -498,6 +493,29 @@
               </button>
             </div>
 
+          </div> <!-- End Grid -->
+
+          <div class="divider"></div>
+
+          <!-- BOTTOM: Admin Management -->
+          <div style="background:linear-gradient(135deg, rgba(0,229,255,0.05), rgba(21,101,192,0.05)); 
+                      border:1px solid var(--cyan); 
+                      border-radius:20px; 
+                      padding:30px; 
+                      text-align:center;
+                      box-shadow: 0 0 30px rgba(0, 229, 255, 0.1)">
+            <div style="font-size:20px; font-weight:700; color:var(--cyan); margin-bottom:12px">
+              <img src="assets/img/lucid_ai_brain.png" style="width:28px; vertical-align:middle; margin-right:10px">
+              Manage All Administrators
+            </div>
+            <p style="color:var(--text-secondary); margin-bottom:24px; max-width:600px; margin-left:auto; margin-right:auto">
+              View, monitor, and manage all accounts with administrative access. 
+              You can track password updates and remove secondary admins if necessary.
+            </p>
+            <button class="btn btn-primary" style="padding: 14px 40px; font-size: 16px; font-weight: 700" onclick="openAdminManager()">
+              <svg class="lucid-svg" style="width:20px; height:20px; margin-right:10px" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              View All Admins List
+            </button>
           </div>
         </div>
 

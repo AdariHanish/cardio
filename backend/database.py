@@ -525,7 +525,7 @@ def admin_login(username, password):
             if cur.fetchone():
                 token = str(uuid.uuid4())
                 cur.execute("UPDATE admin SET token = %s WHERE username = %s", (token, username))
-                return {"success": True, "token": token}
+                return {"success": True, "token": token, "username": username}
         return {"success": False}
     finally:
         conn.close()
@@ -539,6 +539,19 @@ def verify_token(token):
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM admin WHERE token = %s", (token,))
             return cur.fetchone() is not None
+    finally:
+        conn.close()
+
+def get_admin_username(token):
+    """Get username for a given session token"""
+    if not token: return None
+    conn = get_connection()
+    if not conn: return None
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT username FROM admin WHERE token = %s", (token,))
+            res = cur.fetchone()
+            return res['username'] if res else None
     finally:
         conn.close()
 
@@ -575,17 +588,23 @@ def get_all_admins(token):
         conn.close()
 
 def delete_admin(token, admin_id):
-    """Delete an administrator (cannot delete 'hanish')"""
-    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
+    """Delete an administrator (ONLY 'hanish' can delete other admins)"""
+    # Authorization check
+    current_user = get_admin_username(token)
+    if not current_user or current_user.lower() != 'hanish':
+        return {"success": False, "message": "Access Denied: Only the main administrator (hanish) can delete admins."}
+        
     conn = get_connection()
     if not conn: return {"success": False, "message": "Connection failed"}
     try:
         with conn.cursor() as cur:
-            # Check username
+            # Check target username
             cur.execute("SELECT username FROM admin WHERE id = %s", (admin_id,))
             res = cur.fetchone()
             if not res: return {"success": False, "message": "Admin not found"}
-            if res['username'].lower() == 'hanish':
+            
+            target_username = res['username'].lower()
+            if target_username == 'hanish':
                 return {"success": False, "message": "The main admin 'hanish' cannot be deleted."}
             
             # Count remaining admins
@@ -604,8 +623,11 @@ def delete_admin(token, admin_id):
 # DELETE PATIENT
 # =============================================================
 def delete_patient(patient_id, token):
-    """Delete a patient and ALL their readings"""
-    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
+    """Delete a patient and ALL their readings (ONLY 'hanish' can do this)"""
+    current_user = get_admin_username(token)
+    if not current_user or current_user.lower() != 'hanish':
+        return {"success": False, "message": "Access Denied: Only the main administrator (hanish) can delete patients."}
+
     conn = get_connection()
     if not conn: return {"success": False, "message": "Connection failed"}
     try:
@@ -663,8 +685,11 @@ def get_raw_value(table_name, row_id, column_name):
         conn.close()
 
 def delete_reading(reading_id, token):
-    """Delete a single reading by ID"""
-    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
+    """Delete a single reading by ID (ONLY 'hanish' can do this)"""
+    current_user = get_admin_username(token)
+    if not current_user or current_user.lower() != 'hanish':
+        return {"success": False, "message": "Access Denied: Only the main administrator (hanish) can delete readings."}
+
     conn = get_connection()
     if not conn: return {"success": False, "message": "Connection failed"}
     try:
@@ -678,8 +703,11 @@ def delete_reading(reading_id, token):
         conn.close()
 
 def delete_table_row(table_name, row_id, token):
-    """Generic delete for DB Tables view"""
-    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
+    """Generic delete for DB Tables view (ONLY 'hanish' can do this)"""
+    current_user = get_admin_username(token)
+    if not current_user or current_user.lower() != 'hanish':
+        return {"success": False, "message": "Access Denied: Only the main administrator (hanish) can perform deletions."}
+
     allowed_tables = ['patients', 'readings', 'admin']
     if table_name not in allowed_tables: return {"success": False, "message": "Invalid table"}
     
@@ -696,6 +724,9 @@ def delete_table_row(table_name, row_id, token):
                 readings_deleted = cur.rowcount
                 cur.execute("DELETE FROM patients WHERE id = %s", (row_id,))
                 return {"success": True, "message": f"Patient deleted from database tables", "readings_deleted": readings_deleted}
+            elif table_name == 'admin':
+                # Re-use delete_admin for consistency and protection
+                return delete_admin(token, row_id)
             else:
                 cur.execute(f"DELETE FROM {table_name} WHERE id = %s", (row_id,))
                 if cur.rowcount == 0: return {"success": False, "message": "Row not found"}
