@@ -323,7 +323,17 @@ async function executeGlobalSearch() {
     return;
   }
   
-  // Route to history page with search query
+  // If we are already on the history page, route directly to the active search instead of a hard redirect
+  if (window.location.pathname.includes('history.html')) {
+      const historyInput = document.getElementById('pidInput');
+      if (historyInput) {
+          historyInput.value = query;
+          if (typeof searchPatient === 'function') searchPatient();
+      }
+      return;
+  }
+
+  // Otherwise, fallback to history search redirect
   window.location.href = `history.html?q=${encodeURIComponent(query)}`;
 }
 

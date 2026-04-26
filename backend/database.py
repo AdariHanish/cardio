@@ -438,6 +438,41 @@ def get_all_readings(page=1, per_page=100):
     finally:
         conn.close()
 
+# =============================================================
+# READINGS SAVE
+# =============================================================
+def save_reading(patient_id, vitals, predictions, future):
+    """Save a complete reading to the database"""
+    conn = get_connection()
+    if not conn: return False
+    timestamp = datetime.datetime.now()
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                INSERT INTO readings
+                (patient_id, timestamp, heart_rate, spo2, sbp, dbp, ptt_ms,
+                 arrhythmia_risk, arrhythmia_type, heartattack_risk, stroke_risk,
+                 hypertension_risk, overall_condition, future_risk)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                patient_id, timestamp,
+                vitals.get('heart_rate', 0), vitals.get('spo2', 0),
+                predictions.get('hypertension', {}).get('est_sbp', 0),
+                predictions.get('hypertension', {}).get('est_dbp', 0),
+                predictions.get('hypertension', {}).get('ptt_ms',  0),
+                predictions.get('arrhythmia',   {}).get('risk_pct', 0),
+                predictions.get('arrhythmia',   {}).get('type', ''),
+                predictions.get('heartattack',  {}).get('risk_pct', 0),
+                predictions.get('stroke',       {}).get('risk_pct', 0),
+                predictions.get('hypertension', {}).get('risk_pct', 0),
+                future.get('overall', ''), future.get('overall', ''),
+            ))
+        return True
+    except Exception as e:
+        print(f"[DB] Save reading error: {e}")
+        return False
+    finally:
+        conn.close()
 
 # =============================================================
 # STATS
