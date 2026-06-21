@@ -143,6 +143,12 @@
 
 <script src="js/app.js"></script>
 <script>
+  // Clear inputs if page is restored from Back-Forward Cache (bfcache)
+  window.addEventListener('pageshow', function() {
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminPass').value = '';
+  });
+
   function togglePwd() {
     const inp = document.getElementById('adminPass');
     inp.type  = inp.type === 'password' ? 'text' : 'password';
@@ -170,7 +176,8 @@
         btn.style.border = 'none';
         
         setTimeout(() => {
-            window.location.href = 'admin_dashboard.html';
+            // Use replace so clicking back doesn't take you back to login page
+            window.location.replace('admin_dashboard.html');
         }, 800);
         return;
       } else {
