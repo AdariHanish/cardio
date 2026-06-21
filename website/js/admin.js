@@ -944,9 +944,7 @@ function renderTableData(data, viewer) {
                                  <span class="sensitive-value" data-raw="••••••••">••••••••</span>
                                  <button class="btn btn-sm" 
                                          style="padding: 4px; font-size: 10px; display:flex; align-items:center; justify-content:center"
-                                         onmousedown="revealValue('${table_name}', ${row.id}, '${col}', this)"
-                                         onmouseup="maskValue(this)"
-                                         onmouseleave="maskValue(this)">👁</button>
+                                         onclick="toggleSecret(this, '${table_name}', ${row.id}, '${col}')">👁</button>
                                </div>`;
                     style = 'color:var(--text-muted);' +
                         'letter-spacing:1px; white-space:nowrap';
@@ -1133,32 +1131,41 @@ function closeTableViewer() {
 // =============================================================
 // REVEAL SECRETS
 // =============================================================
-async function revealValue(tableName, rowId, colName, btnEl) {
+async function toggleSecret(btnEl, tableName, rowId, colName) {
     const span = btnEl.previousElementSibling;
     const isRevealed = span.getAttribute('data-raw') !== '••••••••';
     
     if (isRevealed) {
-        maskValue(btnEl);
+        // Hide it
+        span.textContent = '••••••••';
+        span.setAttribute('data-raw', '••••••••');
+        btnEl.textContent = '👁';
+        span.style.letterSpacing = '1px';
+        span.style.color = 'var(--text-muted)';
         return;
     }
     
-    const res = await api.get(`/api/admin/db/reveal?table=${tableName}&id=${rowId}&column=${colName}`);
-    if (res.success) {
-        span.textContent = res.value;
-        span.setAttribute('data-raw', res.value);
-        btnEl.textContent = '🔒';
-    } else {
-        showAlert('tableDataViewer', 'error', 'Failed to retrieve sensitive value');
+    // Fetch it
+    btnEl.disabled = true;
+    btnEl.textContent = '⏳';
+    
+    try {
+        const res = await api.get(`/api/admin/db/reveal?table=${tableName}&id=${rowId}&column=${colName}`);
+        if (res.success) {
+            span.textContent = res.value;
+            span.setAttribute('data-raw', res.value);
+            btnEl.textContent = '🔒';
+            span.style.letterSpacing = 'normal';
+            span.style.color = 'var(--cyan)';
+        } else {
+            showAlert('tableDataViewer', 'error', res.message || 'Failed to reveal value');
+            btnEl.textContent = '👁';
+        }
+    } catch (e) {
+        console.error('Reveal failed:', e);
+        btnEl.textContent = '👁';
     }
-}
-
-function maskValue(btnEl) {
-    if (!btnEl) return;
-    const span = btnEl.previousElementSibling;
-    if (!span) return;
-    span.textContent = '••••••••';
-    span.setAttribute('data-raw', '••••••••');
-    btnEl.textContent = '👁';
+    btnEl.disabled = false;
 }
 
 // =============================================================
@@ -1380,35 +1387,6 @@ async function registerNewAdmin() {
     } catch (e) {
         alert('Registration failed. Try again.');
     }
-}
-
-async function revealValue(table, id, col, btn) {
-    const span = btn.previousElementSibling;
-    if (!span) return;
-
-    // Track press state to prevent race conditions
-    btn.isPressed = true;
-
-    try {
-        const data = await api.get(`/api/admin/db/reveal?table=${table}&id=${id}&column=${col}`);
-        // Only reveal if the user is STILL holding the button
-        if (data.success && btn.isPressed) {
-            span.textContent = data.value;
-            span.style.letterSpacing = 'normal';
-            span.style.color = 'var(--cyan)';
-        }
-    } catch (e) {
-        console.error('Reveal failed:', e);
-    }
-}
-
-function maskValue(btn) {
-    btn.isPressed = false;
-    const span = btn.previousElementSibling;
-    if (!span) return;
-    span.textContent = '••••••••';
-    span.style.letterSpacing = '1px';
-    span.style.color = 'var(--text-muted)';
 }
 
 // =============================================================
