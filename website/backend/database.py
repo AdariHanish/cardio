@@ -156,15 +156,13 @@ def init_database():
             admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
             admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
 
-            cur.execute("SELECT id FROM admin WHERE username = %s", (admin_user,))
-            row = cur.fetchone()
-            if not row:
+            cur.execute("SELECT COUNT(*) as cnt FROM admin")
+            if cur.fetchone()['cnt'] == 0:
                 cur.execute("INSERT INTO admin (username, password) VALUES (%s, %s)",
                              (admin_user, admin_pass))
-                print(f"[DB] Seeded admin user: {admin_user}")
+                print(f"[DB] Seeded main admin user: {admin_user}")
             else:
-                cur.execute("UPDATE admin SET password = %s WHERE username = %s", (admin_pass, admin_user))
-                print(f"[DB] Updated admin password for: {admin_user}")
+                print("[DB] Admin table already populated. Skipping admin seeding.")
 
             # ── Seed Sample Data if empty ─────────────────────────────
             cur.execute("SELECT COUNT(*) as count FROM patients")
@@ -605,7 +603,13 @@ def admin_login(username, password):
             if row:
                 token = str(uuid.uuid4())
                 cur.execute("UPDATE admin SET token = %s WHERE username = %s", (token, username))
-                return {"success": True, "token": token, "username": username}
+                
+                # Check if this admin is the main admin (lowest ID)
+                cur.execute("SELECT id FROM admin ORDER BY id ASC LIMIT 1")
+                first_admin = cur.fetchone()
+                is_main = first_admin and (row['id'] == first_admin['id'])
+                
+                return {"success": True, "token": token, "username": username, "is_main": bool(is_main)}
         return {"success": False}
     finally:
         conn.close()
@@ -635,6 +639,28 @@ def get_admin_username(token):
     finally:
         conn.close()
 
+def check_is_main_admin(token):
+    """Check if the session token belongs to the main administrator (admin with lowest ID)"""
+    current_user = get_admin_username(token)
+    if not current_user: return False, None, "Unauthorized"
+    
+    conn = get_connection()
+    if not conn: return False, current_user, "DB Connection Error"
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT username FROM admin ORDER BY id ASC LIMIT 1")
+            main_row = cur.fetchone()
+            if not main_row:
+                return False, current_user, "No admin found"
+            main_admin = main_row['username']
+            if current_user.lower() == main_admin.lower():
+                return True, current_user, None
+            return False, current_user, f"Access Denied: Only the main administrator ({main_admin}) can perform this action."
+    except Exception as e:
+        return False, current_user, f"DB error: {str(e)}"
+    finally:
+        conn.close()
+
 def update_credentials(token, target_username, new_username, new_password):
     """Update admin credentials and increment update count (store plaintext)"""
     current_user = get_admin_username(token)
@@ -643,28 +669,41 @@ def update_credentials(token, target_username, new_username, new_password):
     target_username = target_username.lower() if target_username else ''
     current_user_lower = current_user.lower()
     
-    # 1. Non-main admins can only update their own credentials
-    if current_user_lower != 'hanish' and current_user_lower != target_username:
-        return {"success": False, "message": "You can only update your own credentials."}
-        
-    # 2. No one can update 'hanish' EXCEPT 'hanish'
-    if target_username == 'hanish' and current_user_lower != 'hanish':
-        return {"success": False, "message": "Cannot update the main admin."}
-        
     conn = get_connection()
     if not conn: return {"success": False, "message": "DB error"}
     try:
         with conn.cursor() as cur:
-            # Check if target exists
+            # 1. Identify the main admin (admin with the lowest ID)
+            cur.execute("SELECT username FROM admin ORDER BY id ASC LIMIT 1")
+            main_admin_row = cur.fetchone()
+            if not main_admin_row:
+                return {"success": False, "message": "No admin found"}
+            main_admin = main_admin_row['username'].lower()
+            
+            # 2. Non-main admins can only update their own credentials
+            if current_user_lower != main_admin and current_user_lower != target_username:
+                return {"success": False, "message": "You can only update your own credentials."}
+                
+            # 3. No one can update the main admin EXCEPT the main admin
+            if target_username == main_admin and current_user_lower != main_admin:
+                return {"success": False, "message": "Cannot update the main admin."}
+                
+            # 4. Check if target exists
             cur.execute("SELECT id FROM admin WHERE LOWER(username) = %s", (target_username,))
-            if not cur.fetchone():
+            target_row = cur.fetchone()
+            if not target_row:
                 return {"success": False, "message": "Target user not found."}
+                
+            # 5. Check if the new username is already taken by ANOTHER admin
+            cur.execute("SELECT id FROM admin WHERE LOWER(username) = %s AND id != %s", (new_username.lower(), target_row['id']))
+            if cur.fetchone():
+                return {"success": False, "message": "New username is already taken by another administrator."}
                 
             cur.execute("""
                 UPDATE admin 
                 SET username = %s, password = %s, update_count = update_count + 1 
-                WHERE LOWER(username) = %s
-            """, (new_username, new_password, target_username))
+                WHERE id = %s
+            """, (new_username, new_password, target_row['id']))
             return {"success": True}
     except Exception as e:
         print(f"[DB] Update creds error: {e}")
@@ -679,30 +718,42 @@ def get_all_admins(token):
     if not conn: return []
     try:
         with conn.cursor() as cur:
+            # Find the main admin username
+            cur.execute("SELECT username FROM admin ORDER BY id ASC LIMIT 1")
+            main_row = cur.fetchone()
+            main_admin = main_row['username'].lower() if main_row else ''
+            
             cur.execute("SELECT id, username, password, update_count, created_at FROM admin ORDER BY created_at ASC")
-            return cur.fetchall()
+            rows = cur.fetchall()
+            for r in rows:
+                r['is_main'] = (r['username'].lower() == main_admin)
+            return rows
     finally:
         conn.close()
 
 def delete_admin(token, admin_id):
-    """Delete an administrator (ONLY 'hanish' can delete other admins)"""
-    # Authorization check
-    current_user = get_admin_username(token)
-    if not current_user or current_user.lower() != 'hanish':
-        return {"success": False, "message": "Access Denied: Only the main administrator (hanish) can delete admins."}
+    """Delete an administrator (ONLY the main administrator can delete other admins)"""
+    is_main, current_user, error_msg = check_is_main_admin(token)
+    if not is_main:
+        return {"success": False, "message": error_msg or "Access Denied"}
         
     conn = get_connection()
     if not conn: return {"success": False, "message": "Connection failed"}
     try:
         with conn.cursor() as cur:
+            # Find the main admin username
+            cur.execute("SELECT username FROM admin ORDER BY id ASC LIMIT 1")
+            main_row = cur.fetchone()
+            main_admin = main_row['username'].lower() if main_row else ''
+            
             # Check target username
             cur.execute("SELECT username FROM admin WHERE id = %s", (admin_id,))
             res = cur.fetchone()
             if not res: return {"success": False, "message": "Admin not found"}
             
             target_username = res['username'].lower()
-            if target_username == 'hanish':
-                return {"success": False, "message": "The main admin 'hanish' cannot be deleted."}
+            if target_username == main_admin:
+                return {"success": False, "message": "The main admin cannot be deleted."}
             
             # Count remaining admins
             cur.execute("SELECT COUNT(*) as cnt FROM admin")
@@ -720,10 +771,10 @@ def delete_admin(token, admin_id):
 # DELETE PATIENT
 # =============================================================
 def delete_patient(patient_id, token):
-    """Delete a patient and ALL their readings (ONLY 'hanish' can do this)"""
-    current_user = get_admin_username(token)
-    if not current_user or current_user.lower() != 'hanish':
-        return {"success": False, "message": "Access Denied: Only the main administrator (hanish) can delete patients."}
+    """Delete a patient and ALL their readings (ONLY the main administrator can do this)"""
+    is_main, current_user, error_msg = check_is_main_admin(token)
+    if not is_main:
+        return {"success": False, "message": error_msg or "Access Denied"}
 
     conn = get_connection()
     if not conn: return {"success": False, "message": "Connection failed"}
@@ -780,10 +831,10 @@ def get_raw_value(table_name, row_id, column_name):
         conn.close()
 
 def delete_reading(reading_id, token):
-    """Delete a single reading by ID (ONLY 'hanish' can do this)"""
-    current_user = get_admin_username(token)
-    if not current_user or current_user.lower() != 'hanish':
-        return {"success": False, "message": "Access Denied: Only the main administrator (hanish) can delete readings."}
+    """Delete a single reading by ID (ONLY the main administrator can do this)"""
+    is_main, current_user, error_msg = check_is_main_admin(token)
+    if not is_main:
+        return {"success": False, "message": error_msg or "Access Denied"}
 
     conn = get_connection()
     if not conn: return {"success": False, "message": "Connection failed"}
@@ -798,10 +849,10 @@ def delete_reading(reading_id, token):
         conn.close()
 
 def delete_table_row(table_name, row_id, token):
-    """Generic delete for DB Tables view (ONLY 'hanish' can do this)"""
-    current_user = get_admin_username(token)
-    if not current_user or current_user.lower() != 'hanish':
-        return {"success": False, "message": "Access Denied: Only the main administrator (hanish) can perform deletions."}
+    """Generic delete for DB Tables view (ONLY the main administrator can perform deletions)"""
+    is_main, current_user, error_msg = check_is_main_admin(token)
+    if not is_main:
+        return {"success": False, "message": error_msg or "Access Denied"}
 
     allowed_tables = ['patients', 'readings', 'admin']
     if table_name not in allowed_tables: return {"success": False, "message": "Invalid table"}

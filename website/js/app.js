@@ -132,7 +132,8 @@ function checkAdminAuth() {
   const disp = document.getElementById('adminUserDisp');
   if (disp) disp.textContent = user || 'Admin';
 
-  if (user && user.toLowerCase() === 'hanish') {
+  const isMain = sessionStorage.getItem('adminIsMain') === 'true';
+  if (isMain) {
     const modelsNav = document.getElementById('nav-item-models');
     if (modelsNav) modelsNav.style.display = 'block';
   }

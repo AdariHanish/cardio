@@ -161,8 +161,7 @@ async function loadMore(type) {
 // ===========================================================
 // Check if current user is main admin
 function isMainAdmin() {
-    const user = sessionStorage.getItem('adminUser');
-    return user && user.toLowerCase() === 'hanish';
+    return sessionStorage.getItem('adminIsMain') === 'true';
 }
 
 function renderPatientsTable(patients) {
@@ -1763,7 +1762,7 @@ async function loadAdmins() {
                 <td style="text-align:center">
                     ${!isMainAdmin() ? 
                         '<span style="font-size:11px; color:var(--text-muted)">No Permission</span>' :
-                        (a.username.toLowerCase() === 'hanish' ? 
+                        (a.is_main ? 
                             '<span style="font-size:11px; color:var(--text-muted)">Protected</span>' : 
                             `<button class="btn btn-sm" style="background:rgba(255,68,68,0.1); color:var(--red); border:1px solid rgba(255,68,68,0.2)"
                                      onclick="deleteAdmin(${a.id}, '${a.username}')">Delete</button>`

@@ -169,6 +169,7 @@
       if (data.success) {
         sessionStorage.setItem('adminToken', data.token);
         sessionStorage.setItem('adminUser',  user);
+        sessionStorage.setItem('adminIsMain', data.is_main ? 'true' : 'false');
         
         btn.textContent = '🔓 Dashboard Unlocked...';
         btn.style.background = 'linear-gradient(135deg, #00E676, #00BFA5)'; // Turn green on success
