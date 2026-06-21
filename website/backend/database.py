@@ -111,7 +111,8 @@ def init_database():
                     hypertension_risk  FLOAT DEFAULT 0,
                     overall_condition  TEXT,
                     future_risk        TEXT,
-                    INDEX idx_patient (patient_id)
+                    INDEX idx_patient (patient_id),
+                    INDEX idx_timestamp (timestamp)
                 )
             ''')
 
@@ -133,6 +134,9 @@ def init_database():
             except: pass
             try:
                 cur.execute("ALTER TABLE admin ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+            except: pass
+            try:
+                cur.execute("ALTER TABLE readings ADD INDEX idx_timestamp (timestamp)")
             except: pass
 
             # ── Models Table ───────────────────────────────────────────

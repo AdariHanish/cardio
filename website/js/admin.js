@@ -57,12 +57,20 @@ window.onpageshow = function (event) {
 async function loadAdminData() {
     patientsPage = 1;
     readingsPage = 1;
+    
+    // Show loader if it exists
+    const loader = document.getElementById('globalDbLoader');
+    if (loader) loader.style.display = 'flex';
+
     await Promise.all([
         loadPatients(true),
         loadAllReadings(true),
         loadStats(),
         loadModels(),
     ]);
+
+    // Hide loader once all DB fetching is complete
+    if (loader) loader.style.display = 'none';
 }
 
 // =============================================================
