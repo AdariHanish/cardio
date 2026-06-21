@@ -155,19 +155,15 @@ def init_database():
             # ── Seed Admin User ───────────────────────────────────────
             admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
             admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
-            admin_hash = hashlib.sha256(admin_pass.encode()).hexdigest()
-
-            # Ensure all other administrators are removed from the database
-            cur.execute("DELETE FROM admin WHERE username != %s", (admin_user,))
 
             cur.execute("SELECT id FROM admin WHERE username = %s", (admin_user,))
             row = cur.fetchone()
             if not row:
                 cur.execute("INSERT INTO admin (username, password) VALUES (%s, %s)",
-                             (admin_user, admin_hash))
+                             (admin_user, admin_pass))
                 print(f"[DB] Seeded admin user: {admin_user}")
             else:
-                cur.execute("UPDATE admin SET password = %s WHERE username = %s", (admin_hash, admin_user))
+                cur.execute("UPDATE admin SET password = %s WHERE username = %s", (admin_pass, admin_user))
                 print(f"[DB] Updated admin password for: {admin_user}")
 
             # ── Seed Sample Data if empty ─────────────────────────────
@@ -557,11 +553,20 @@ def admin_login(username, password):
     """Verify admin credentials and return session token"""
     conn = get_connection()
     if not conn: return {"success": False}
-    hashed = hashlib.sha256(password.encode()).hexdigest()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM admin WHERE username = %s AND password = %s", (username, hashed))
-            if cur.fetchone():
+            # First try plaintext (new approach)
+            cur.execute("SELECT * FROM admin WHERE username = %s AND password = %s", (username, password))
+            row = cur.fetchone()
+            if not row:
+                # Fallback: try SHA-256 hash (for old accounts not yet migrated)
+                hashed = hashlib.sha256(password.encode()).hexdigest()
+                cur.execute("SELECT * FROM admin WHERE username = %s AND password = %s", (username, hashed))
+                row = cur.fetchone()
+                if row:
+                    # Migrate: store plaintext going forward so reveal works
+                    cur.execute("UPDATE admin SET password = %s WHERE username = %s", (password, username))
+            if row:
                 token = str(uuid.uuid4())
                 cur.execute("UPDATE admin SET token = %s WHERE username = %s", (token, username))
                 return {"success": True, "token": token, "username": username}
@@ -595,9 +600,8 @@ def get_admin_username(token):
         conn.close()
 
 def update_credentials(token, new_username, new_password):
-    """Update admin credentials and increment update count"""
+    """Update admin credentials and increment update count (store plaintext)"""
     if not verify_token(token): return False
-    hashed = hashlib.sha256(new_password.encode()).hexdigest()
     conn = get_connection()
     if not conn: return False
     try:
@@ -606,7 +610,7 @@ def update_credentials(token, new_username, new_password):
                 UPDATE admin 
                 SET username = %s, password = %s, update_count = update_count + 1 
                 WHERE token = %s
-            """, (new_username, hashed, token))
+            """, (new_username, new_password, token))
             return True
     except Exception as e:
         print(f"[DB] Update creds error: {e}")
@@ -685,7 +689,7 @@ def delete_patient(patient_id, token):
         conn.close()
 
 def add_admin(username, password):
-    """Add a new administrator"""
+    """Add a new administrator (store plaintext so eye-reveal works)"""
     conn = get_connection()
     if not conn: return {"success": False, "message": "DB Connection Error"}
     try:
@@ -695,10 +699,8 @@ def add_admin(username, password):
             if cur.fetchone():
                 return {"success": False, "message": "Username already exists"}
             
-            # Hash password
-            pw_hash = hashlib.sha256(password.encode()).hexdigest()
             cur.execute("INSERT INTO admin (username, password, created_at, update_count) VALUES (%s, %s, NOW(), 0)",
-                         (username, pw_hash))
+                         (username, password))
             return {"success": True, "message": "Admin registered successfully"}
     except Exception as e:
         return {"success": False, "message": str(e)}
