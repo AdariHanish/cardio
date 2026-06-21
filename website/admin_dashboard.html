@@ -287,6 +287,13 @@
                 </span>All Readings
               </a>
             </li>
+            <li id="nav-item-models" style="display:none;">
+              <a onclick="showSection('models')">
+                <span class="menu-icon">
+                  <img src="assets/img/lucid_ai_brain.png" alt="Models" class="lucid-icon">
+                </span>AI Models
+              </a>
+            </li>
             <li>
               <a onclick="showSection('database')">
                 <span class="menu-icon">
@@ -430,6 +437,107 @@
           <!-- Pagination Button -->
           <div class="load-more-container" id="readingsLoadMore">
             <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- AI MODELS SECTION -->
+        <div id="section-models" class="glass-card" style="display:none">
+          <div class="section-title mb-3">
+            <img src="assets/img/lucid_ai_brain.png" style="width:24px; height:24px; vertical-align:middle; margin-right:8px"> AI Model Management
+          </div>
+          
+          <div style="font-size:14px; color:var(--text-secondary); margin-bottom:16px">
+            Upload your pre-trained .h5 or .tflite files here. They will be stored directly in the TiDB database and loaded by the ESP32 Backend.
+          </div>
+          
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; margin-bottom:32px">
+            
+            <!-- Arrhythmia -->
+            <div class="glass-card" style="padding:16px; background:rgba(255,255,255,0.02)">
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px">
+                <strong style="color:var(--cyan)">best_arrhythmia.h5</strong>
+                <span id="status_arrhythmia" class="badge badge-warning" style="font-size:10px">Not Uploaded</span>
+              </div>
+              <input type="file" class="form-input mb-2" id="file_arrhythmia" accept=".tflite,.h5" style="font-size:12px">
+              <button class="btn btn-primary btn-sm" style="width:100%" onclick="uploadSpecificModel('arrhythmia', 'file_arrhythmia')">Upload Arrhythmia Model</button>
+            </div>
+
+            <!-- Heart Attack -->
+            <div class="glass-card" style="padding:16px; background:rgba(255,255,255,0.02)">
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px">
+                <strong style="color:var(--cyan)">best_heartattack.h5</strong>
+                <span id="status_heartattack" class="badge badge-warning" style="font-size:10px">Not Uploaded</span>
+              </div>
+              <input type="file" class="form-input mb-2" id="file_heartattack" accept=".tflite,.h5" style="font-size:12px">
+              <button class="btn btn-primary btn-sm" style="width:100%" onclick="uploadSpecificModel('heartattack', 'file_heartattack')">Upload Heart Attack Model</button>
+            </div>
+
+            <!-- Hypertension -->
+            <div class="glass-card" style="padding:16px; background:rgba(255,255,255,0.02)">
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px">
+                <strong style="color:var(--cyan)">best_hypertension.h5</strong>
+                <span id="status_hypertension" class="badge badge-warning" style="font-size:10px">Not Uploaded</span>
+              </div>
+              <input type="file" class="form-input mb-2" id="file_hypertension" accept=".tflite,.h5" style="font-size:12px">
+              <button class="btn btn-primary btn-sm" style="width:100%" onclick="uploadSpecificModel('hypertension', 'file_hypertension')">Upload Hypertension Model</button>
+            </div>
+
+            <!-- Stroke -->
+            <div class="glass-card" style="padding:16px; background:rgba(255,255,255,0.02)">
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px">
+                <strong style="color:var(--cyan)">best_stroke.h5</strong>
+                <span id="status_stroke" class="badge badge-warning" style="font-size:10px">Not Uploaded</span>
+              </div>
+              <input type="file" class="form-input mb-2" id="file_stroke" accept=".tflite,.h5" style="font-size:12px">
+              <button class="btn btn-primary btn-sm" style="width:100%" onclick="uploadSpecificModel('stroke', 'file_stroke')">Upload Stroke Model</button>
+            </div>
+
+            <!-- UCI -->
+            <div class="glass-card" style="padding:16px; background:rgba(255,255,255,0.02)">
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px">
+                <strong style="color:var(--cyan)">best_uci.h5</strong>
+                <span id="status_uci" class="badge badge-warning" style="font-size:10px">Not Uploaded</span>
+              </div>
+              <div id="upload_area_uci">
+                <input type="file" class="form-input mb-2" id="file_uci" accept=".tflite,.h5" style="font-size:12px">
+                <button class="btn btn-primary btn-sm" style="width:100%" onclick="uploadSpecificModel('uci', 'file_uci')">Upload UCI Fallback</button>
+              </div>
+              <div id="delete_area_uci" style="display:none;"></div>
+            </div>
+
+            <!-- Old General CardioModel -->
+            <div class="glass-card" style="padding:16px; background:rgba(255,255,255,0.02)">
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px">
+                <strong style="color:var(--cyan)">cardiomodel.h5</strong>
+                <span id="status_cardiomodel" class="badge badge-warning" style="font-size:10px">Not Uploaded</span>
+              </div>
+              <div id="upload_area_cardiomodel">
+                <input type="file" class="form-input mb-2" id="file_cardiomodel" accept=".tflite,.h5" style="font-size:12px">
+                <button class="btn btn-primary btn-sm" style="width:100%" onclick="uploadSpecificModel('cardiomodel', 'file_cardiomodel')">Upload General Cardio Model</button>
+              </div>
+              <div id="delete_area_cardiomodel" style="display:none;"></div>
+            </div>
+
+          </div>
+
+          <div class="section-title mb-3" style="font-size:16px">Uploaded Models History</div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Model Type</th>
+                  <th>Version</th>
+                  <th>Size</th>
+                  <th>Uploaded At</th>
+                  <th>Status</th>
+                  <th style="text-align:center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="modelsTableBody">
+                <tr><td colspan="6" style="text-align:center">Loading models...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 

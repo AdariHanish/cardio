@@ -135,6 +135,19 @@ def init_database():
                 cur.execute("ALTER TABLE admin ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
             except: pass
 
+            # ── Models Table ───────────────────────────────────────────
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS models (
+                    id            INT PRIMARY KEY AUTO_INCREMENT,
+                    name          VARCHAR(100) NOT NULL,
+                    version       VARCHAR(50) NOT NULL,
+                    model_data    LONGBLOB NOT NULL,
+                    is_active     BOOLEAN DEFAULT FALSE,
+                    uploaded_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_name (name)
+                )
+            ''')
+
             # ── Seed Admin User ───────────────────────────────────────
             admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
             admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
@@ -774,7 +787,7 @@ def get_table_names():
 
 def get_table_info(table_name):
     """Get column names and types for a table"""
-    allowed_tables = ['patients', 'readings', 'admin']
+    allowed_tables = ['patients', 'readings', 'admin', 'models']
     if table_name not in allowed_tables: return {"success": False, "message": "Invalid table"}
     conn = get_connection()
     if not conn: return {"success": False, "message": "Connection failed"}
@@ -790,7 +803,7 @@ def get_table_info(table_name):
 
 def get_table_data(table_name, page=1, per_page=50, search='', sort_by='id', sort_order='DESC'):
     """Get paginated data from a table"""
-    allowed_tables = ['patients', 'readings', 'admin']
+    allowed_tables = ['patients', 'readings', 'admin', 'models']
     if table_name not in allowed_tables: return {"success": False, "message": "Invalid table"}
     conn = get_connection()
     if not conn: return {"success": False, "message": "Connection failed"}
@@ -805,14 +818,18 @@ def get_table_data(table_name, page=1, per_page=50, search='', sort_by='id', sor
             # Simple search logic
             where_clause = ""
             params = []
+            # Skip BLOB/binary columns to avoid casting errors
+            skip_cols = ['model_data']
             if search:
                 search_val = f"%{search}%"
                 search_conds = []
                 for col in columns:
-                    # In MySQL/TiDB, we can search in most columns using LIKE
+                    if col in skip_cols:
+                        continue
                     search_conds.append(f"CAST({col} AS CHAR) LIKE %s")
                     params.append(search_val)
-                where_clause = "WHERE " + " OR ".join(search_conds)
+                if search_conds:
+                    where_clause = "WHERE " + " OR ".join(search_conds)
             
             cur.execute(f"SELECT COUNT(*) as count FROM {table_name} {where_clause}", params)
             total_rows = cur.fetchone()['count']
@@ -848,6 +865,109 @@ def get_todays_readings():
             for r in rows:
                 if r['timestamp']: r['timestamp'] = str(r['timestamp'])
             return {"success": True, "readings": rows}
+    finally:
+        conn.close()
+
+# =============================================================
+# MODEL MANAGEMENT
+# =============================================================
+def upload_model(name, version, model_data):
+    """Upload a new AI model to the database"""
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Database connection failed"}
+    
+    try:
+        with conn.cursor() as cur:
+            # Check if this exact version exists
+            cur.execute("SELECT id FROM models WHERE name = %s AND version = %s", (name, version))
+            if cur.fetchone():
+                return {"success": False, "message": f"Version {version} of model {name} already exists."}
+                
+            cur.execute('''
+                INSERT INTO models (name, version, model_data, is_active)
+                VALUES (%s, %s, %s, FALSE)
+            ''', (name, version, model_data))
+            
+            # If this is the only model of this type, make it active
+            cur.execute("SELECT COUNT(*) as cnt FROM models WHERE name = %s", (name,))
+            if cur.fetchone()['cnt'] == 1:
+                cur.execute("UPDATE models SET is_active = TRUE WHERE name = %s AND version = %s", (name, version))
+                
+            return {"success": True, "message": "Model uploaded successfully"}
+    except Exception as e:
+        print(f"[DB] Upload model error: {e}")
+        return {"success": False, "message": str(e)}
+    finally:
+        conn.close()
+
+def list_models():
+    """List all uploaded models (excluding actual BLOB data for speed)"""
+    conn = get_connection()
+    if not conn: return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT id, name, version, is_active, uploaded_at, LENGTH(model_data) as size_bytes 
+                FROM models 
+                ORDER BY name ASC, uploaded_at DESC
+            ''')
+            rows = cur.fetchall()
+            for r in rows:
+                if r['uploaded_at']: r['uploaded_at'] = str(r['uploaded_at'])
+            return rows
+    finally:
+        conn.close()
+
+def set_active_model(model_id, name, token):
+    """Set a specific model version as active, deactivating others of the same name"""
+    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Connection failed"}
+    
+    try:
+        with conn.cursor() as cur:
+            # Deactivate all models for this name
+            cur.execute("UPDATE models SET is_active = FALSE WHERE name = %s", (name,))
+            # Activate the specific one
+            cur.execute("UPDATE models SET is_active = TRUE WHERE id = %s", (model_id,))
+            if cur.rowcount == 0:
+                return {"success": False, "message": "Model not found"}
+            return {"success": True, "message": "Active model updated"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+    finally:
+        conn.close()
+
+def get_active_models_data():
+    """Get the BLOB data for all active models (for inference backend)"""
+    conn = get_connection()
+    if not conn: return {}
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT name, version, model_data FROM models WHERE is_active = TRUE")
+            rows = cur.fetchall()
+            return {r['name']: {"version": r['version'], "data": r['model_data']} for r in rows}
+    except Exception as e:
+        print(f"[DB ERROR] get_active_models_data: {e}")
+        return {}
+    finally:
+        conn.close()
+
+def delete_model(model_id, token):
+    """Delete a model"""
+    if not verify_token(token): return {"success": False, "message": "Unauthorized"}
+    conn = get_connection()
+    if not conn: return {"success": False, "message": "Connection failed"}
+    
+    try:
+        with conn.cursor() as cur:
+            # Cannot delete if it is the only active one without setting another active (handled optionally)
+            cur.execute("DELETE FROM models WHERE id = %s", (model_id,))
+            if cur.rowcount > 0:
+                return {"success": True, "message": "Model deleted"}
+            return {"success": False, "message": "Model not found"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
     finally:
         conn.close()
 

@@ -61,6 +61,7 @@ async function loadAdminData() {
         loadPatients(true),
         loadAllReadings(true),
         loadStats(),
+        loadModels(),
     ]);
 }
 
@@ -1293,7 +1294,7 @@ async function executeDeleteRow(tableName, rowId) {
 // =============================================================
 function showSection(name) {
     const sections = [
-        'patients', 'readings', 'database', 'settings'
+        'patients', 'readings', 'database', 'settings', 'models'
     ];
     sections.forEach(s => {
         const el = document.getElementById(`section-${s}`);
@@ -1311,6 +1312,7 @@ function showSection(name) {
         currentTableName = null;
         loadDbTables();
     }
+    if (name === 'models') loadModels();
 }
 
 async function loadAllReadings() {
@@ -1780,3 +1782,183 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// =============================================================
+// AI MODELS MANAGEMENT
+// =============================================================
+async function uploadSpecificModel(type, inputId) {
+    const fileInput = document.getElementById(inputId);
+    const statusBadge = document.getElementById('status_' + type);
+
+    if (fileInput.files.length === 0) {
+        alert("Please select a file to upload for " + type);
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('name', type);
+    formData.append('version', 'v1.0'); // Auto-version or can prompt user
+    formData.append('file', file);
+
+    statusBadge.className = 'badge badge-warning';
+    statusBadge.textContent = 'Uploading...';
+
+    try {
+        const token = sessionStorage.getItem('adminToken');
+        const response = await fetch('/api/admin/models/upload', {
+            method: 'POST',
+            headers: { 'X-Admin-Token': token },
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            statusBadge.className = 'badge badge-online';
+            statusBadge.textContent = 'Uploaded';
+            fileInput.value = '';
+            await loadModels();
+        } else {
+            statusBadge.className = 'badge badge-warning';
+            statusBadge.style.backgroundColor = 'rgba(255,68,68,0.1)';
+            statusBadge.style.color = 'var(--red)';
+            statusBadge.textContent = 'Failed';
+            alert('Upload failed: ' + data.message);
+        }
+    } catch (err) {
+        statusBadge.className = 'badge badge-warning';
+        statusBadge.textContent = 'Error';
+        alert('Upload error: ' + err.message);
+    }
+}
+
+async function loadLogs() {
+    const tbody = document.getElementById('logsTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center">No logs available.</td></tr>`;
+}
+
+async function deleteSpecificModelId(id, name) {
+    if (!confirm('Are you sure you want to delete the ' + name + ' model?')) return;
+    
+    const badge = document.getElementById('status_' + name);
+    if (badge) badge.textContent = 'Deleting...';
+    
+    try {
+        const data = await api.delete('/api/admin/models/' + id);
+        if (data.success) {
+            await loadModels();
+        } else {
+            alert('Delete failed: ' + data.message);
+            await loadModels();
+        }
+    } catch (err) {
+        alert('Delete error: ' + err.message);
+        await loadModels();
+    }
+}
+
+async function loadModels() {
+    const tbody = document.getElementById('modelsTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center"><div class="spinner"></div></td></tr>`;
+
+    try {
+        const data = await api.get('/api/admin/models');
+        if (data.success) {
+            const models = data.models || [];
+            
+            // Reset all badges to missing first
+            ['arrhythmia', 'heartattack', 'hypertension', 'stroke', 'uci', 'cardiomodel'].forEach(t => {
+                const badge = document.getElementById('status_' + t);
+                if (badge) {
+                    badge.className = 'badge badge-warning';
+                    badge.style = 'font-size:10px';
+                    badge.textContent = 'Not Uploaded';
+                }
+                const upArea = document.getElementById('upload_area_' + t);
+                const delArea = document.getElementById('delete_area_' + t);
+                if (upArea) upArea.style.display = 'block';
+                if (delArea) delArea.style.display = 'none';
+            });
+
+            // Update badges for active uploaded models
+            models.forEach(m => {
+                if (m.is_active) {
+                    const badge = document.getElementById('status_' + m.name);
+                    if (badge) {
+                        badge.className = 'badge badge-online';
+                        badge.style = 'font-size:10px';
+                        badge.textContent = 'Active / Loaded';
+                    }
+                    const upArea = document.getElementById('upload_area_' + m.name);
+                    const delArea = document.getElementById('delete_area_' + m.name);
+                    if (upArea) upArea.style.display = 'none';
+                    if (delArea) {
+                        delArea.style.display = 'block';
+                        delArea.innerHTML = `<button class="btn btn-danger btn-sm" style="width:100%" onclick="deleteSpecificModelId(${m.id}, '${m.name}')">Delete Model</button>`;
+                    }
+                }
+            });
+
+            if (models.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px">No models uploaded yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = models.map(m => `
+                <tr>
+                    <td style="font-weight:600; color:var(--cyan); text-transform:capitalize">${m.name}</td>
+                    <td>${m.version}</td>
+                    <td>${(m.size_bytes / (1024 * 1024)).toFixed(2)} MB</td>
+                    <td style="font-size:12px; color:var(--text-secondary)">${formatTimestamp(m.uploaded_at)}</td>
+                    <td>
+                        ${m.is_active 
+                            ? `<span class="badge badge-online">Active</span>` 
+                            : `<span class="badge badge-warning" style="background:rgba(255,255,255,0.1); color:var(--text-secondary)">Inactive</span>`
+                        }
+                    </td>
+                    <td style="text-align:center">
+                        ${!m.is_active ? `
+                            <button class="btn btn-sm btn-outline" style="margin-right:6px" onclick="activateModel(${m.id}, '${m.name}')">Activate</button>
+                        ` : ''}
+                        <button class="btn btn-sm" style="background:rgba(255,68,68,0.1); color:var(--red); border:1px solid rgba(255,68,68,0.2)" onclick="deleteModel(${m.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--red)">Failed to load models: ${data.message}</td></tr>`;
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--red)">Error fetching models.</td></tr>`;
+    }
+}
+
+async function activateModel(id, name) {
+    if (!confirm(`Are you sure you want to set this version as the active ${name} model?`)) return;
+    try {
+        const data = await api.post('/api/admin/models/activate', { id, name });
+        if (data.success) {
+            await loadModels();
+        } else {
+            alert('Failed to activate: ' + data.message);
+        }
+    } catch (e) {
+        alert('Error communicating with server.');
+    }
+}
+
+async function deleteModel(id) {
+    if (!confirm('Are you sure you want to delete this model?')) return;
+    try {
+        const data = await api.delete(`/api/admin/models/${id}`);
+        if (data.success) {
+            await loadModels();
+        } else {
+            alert('Failed to delete: ' + data.message);
+        }
+    } catch (e) {
+        alert('Error communicating with server.');
+    }
+}

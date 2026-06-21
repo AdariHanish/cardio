@@ -304,23 +304,6 @@ def admin_delete(admin_id):
     token = request.headers.get('X-Admin-Token', '')
     return jsonify(db.delete_admin(token, admin_id))
 
-@app.route('/api/admin/db/reveal')
-def admin_reveal():
-    token = request.headers.get('X-Admin-Token', '')
-    if not db.verify_token(token):
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    table = request.args.get('table')
-    row_id = request.args.get('id')
-    col = request.args.get('column')
-    
-    if not table or not row_id or not col:
-        return jsonify({"success": False, "message": "Missing parameters"}), 400
-        
-    val = db.get_raw_value(table, row_id, col)
-    if val is not None:
-        return jsonify({"success": True, "value": val})
-    return jsonify({"success": False, "message": "Value not found or forbidden"}), 404
 
 @app.route('/api/admin/update-creds', methods=['POST'])
 def admin_update_creds():
@@ -382,20 +365,9 @@ import threading
 import time
 import datetime
 
-# --- GPIO Setup ---
-try:
-    import RPi.GPIO as GPIO
-    GPIO.setmode(GPIO.BCM)
-    GPIO_BUTTON_SAVE = 25
-    GPIO.setup(GPIO_BUTTON_SAVE, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    HAS_GPIO = True
-except Exception as e:
-    print(f"[SYSTEM] GPIO Init Failed/Skipped: {e}")
-    HAS_GPIO = False
-
 # --- Persistence Helpers ---
 def save_measurement_result(pid, preds, vitals):
-    """Saves result to both TiDB and Local Pi Memory"""
+    """Saves result to TiDB Cloud"""
     if not pid: return False
 
     # 1. Prepare Payload
@@ -429,51 +401,8 @@ def save_measurement_result(pid, preds, vitals):
     # 2. Save to TiDB Cloud
     print(f"[SYNC] Saving to TiDB for Patient {pid}...")
     db.add_patient_reading(pid, reading_payload)
-
-    # 3. Save to Local Pi Memory (JSON Backup)
-    try:
-        backup_path = os.path.join(BASE_DIR, 'local_backup.json')
-        backups = []
-        if os.path.exists(backup_path):
-            with open(backup_path, 'r') as f:
-                backups = json.load(f)
-        
-        backups.append({"patient_id": pid, "data": reading_payload})
-        with open(backup_path, 'w') as f:
-            json.dump(backups, f, indent=4)
-        print(f"[LOCAL] Backup saved to {backup_path}")
-    except Exception as e:
-        print(f"[ERROR] Local backup failed: {e}")
     
     return True
-
-# --- Background GPIO Listener ---
-def gpio_listener():
-    if not HAS_GPIO: return
-    print(f"[SYSTEM] Hardware Button Listener Active (GPIO {GPIO_BUTTON_SAVE})")
-    while True:
-        try:
-            # Button is PUD_UP (Pressed = Low/0)
-            if GPIO.input(GPIO_BUTTON_SAVE) == GPIO.LOW:
-                pid = LIVE_DATA.get('current_patient')
-                ready = LIVE_DATA.get('predictions_ready')
-                
-                if pid and ready:
-                    print(f"[HARDWARE] Button 25 Pressed! Manual Trigger Save for {pid}")
-                    save_measurement_result(pid, LIVE_DATA.get('predictions', {}), LIVE_DATA.get('vitals', {}))
-                    # Debounce
-                    time.sleep(1)
-                else:
-                    print("[HARDWARE] Button pressed but no active patient/ready data.")
-                    time.sleep(0.5)
-            time.sleep(0.1)
-        except Exception as e:
-            print(f"[SYSTEM] GPIO Thread Error: {e}")
-            time.sleep(1)
-
-# Start GPIO thread
-thread = threading.Thread(target=gpio_listener, daemon=True)
-thread.start()
 
 @app.route('/api/monitor/update', methods=['POST'])
 def update_live():
@@ -511,6 +440,105 @@ def system_status():
         "db_connected": db.get_connection() is not None,
         "ecg_detected": is_connected and len(LIVE_DATA.get('ecg_samples', [])) > 0,
         "device_state": state
+    })
+
+# =============================================================
+# ── SECTION 5: ESP32 INFERENCE & CLOUD MODELS ────────────────
+# =============================================================
+@app.route('/api/admin/models', methods=['GET'])
+def get_models():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify({"success": True, "models": db.list_models()})
+
+@app.route('/api/admin/models/upload', methods=['POST'])
+def upload_model_file():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    name = request.form.get('name')
+    version = request.form.get('version')
+    file = request.files.get('file')
+    
+    if not name or not version or not file:
+        return jsonify({"success": False, "message": "Missing form data"}), 400
+        
+    file_bytes = file.read()
+    if not file_bytes:
+        return jsonify({"success": False, "message": "Empty file"}), 400
+        
+    return jsonify(db.upload_model(name, version, file_bytes))
+
+@app.route('/api/admin/models/activate', methods=['POST'])
+def activate_model():
+    token = request.headers.get('X-Admin-Token', '')
+    if not db.verify_token(token):
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    data = request.json or {}
+    model_id = data.get('id')
+    name = data.get('name')
+    if not model_id or not name:
+        return jsonify({"success": False, "message": "Missing ID or name"}), 400
+        
+    return jsonify(db.set_active_model(model_id, name, token))
+
+@app.route('/api/admin/models/<int:model_id>', methods=['DELETE'])
+def delete_model_endpoint(model_id):
+    token = request.headers.get('X-Admin-Token', '')
+    return jsonify(db.delete_model(model_id, token))
+
+@app.route('/api/inference', methods=['POST'])
+def run_inference():
+    """
+    Called by ESP32 to run inference on cloud.
+    Expects: { "patient_id": "P123", "ecg": [...], "heart_rate": 75, "spo2": 98 }
+    """
+    data = request.json or {}
+    pid = data.get('patient_id')
+    
+    if not pid:
+        return jsonify({"success": False, "message": "No patient_id provided"}), 400
+        
+    # Simulate inference logic (would normally load active models from DB and use tflite_runtime)
+    import random
+    arr_risk = random.uniform(5, 25)
+    ha_risk = random.uniform(5, 40)
+    str_risk = random.uniform(3, 20)
+    htn_risk = random.uniform(10, 55)
+    
+    preds = {
+        "arrhythmia": {"risk_pct": round(arr_risk, 1), "type": "Normal"},
+        "heartattack": {"risk_pct": round(ha_risk, 1), "type": "Normal" if ha_risk < 50 else "Abnormal"},
+        "stroke": {"risk_pct": round(str_risk, 1), "type": "Low Risk" if str_risk < 50 else "At Risk"},
+        "hypertension": {"risk_pct": round(htn_risk, 1), "type": "Normal BP" if htn_risk < 50 else "Hypertensive"},
+        "future": {"overall": "Stable.", "risk_pct": 20.0}
+    }
+    vitals = {
+        "heart_rate": data.get("heart_rate", 0),
+        "spo2": data.get("spo2", 0),
+        "sbp": 120,
+        "dbp": 80,
+        "ptt": 150
+    }
+    
+    # Save automatically
+    save_measurement_result(pid, preds, vitals)
+    
+    # Update live data so the dashboard sees it instantly
+    LIVE_DATA['vitals'] = vitals
+    LIVE_DATA['predictions'] = preds
+    LIVE_DATA['predictions_ready'] = True
+    LIVE_DATA['current_patient'] = pid
+    LIVE_DATA['device_state'] = 'READY'
+    LIVE_DATA['last_ping'] = time.time()
+    
+    return jsonify({
+        "success": True,
+        "predictions": preds,
+        "vitals": vitals
     })
 
 # =============================================================

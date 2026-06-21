@@ -1,5 +1,26 @@
-.vercel
+# Sensitive files
 .env
+website/.env
+
+# Package / Dependencies
+node_modules/
+website/node_modules/
+
+# Vercel metadata
+.vercel/
+website/.vercel/
+
+# Python cache
 __pycache__/
+*/__pycache__/
 *.pyc
-node_modules/
+
+# Local backup / logs
+local_backup.json
+website/local_backup.json
+logs/
+website/logs/
+
+# AI Models
+*.h5
+*.tflite
