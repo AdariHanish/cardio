@@ -635,22 +635,40 @@ def get_admin_username(token):
     finally:
         conn.close()
 
-def update_credentials(token, new_username, new_password):
+def update_credentials(token, target_username, new_username, new_password):
     """Update admin credentials and increment update count (store plaintext)"""
-    if not verify_token(token): return False
+    current_user = get_admin_username(token)
+    if not current_user: return {"success": False, "message": "Unauthorized"}
+    
+    target_username = target_username.lower() if target_username else ''
+    current_user_lower = current_user.lower()
+    
+    # 1. Non-main admins can only update their own credentials
+    if current_user_lower != 'hanish' and current_user_lower != target_username:
+        return {"success": False, "message": "You can only update your own credentials."}
+        
+    # 2. No one can update 'hanish' EXCEPT 'hanish'
+    if target_username == 'hanish' and current_user_lower != 'hanish':
+        return {"success": False, "message": "Cannot update the main admin."}
+        
     conn = get_connection()
-    if not conn: return False
+    if not conn: return {"success": False, "message": "DB error"}
     try:
         with conn.cursor() as cur:
+            # Check if target exists
+            cur.execute("SELECT id FROM admin WHERE LOWER(username) = %s", (target_username,))
+            if not cur.fetchone():
+                return {"success": False, "message": "Target user not found."}
+                
             cur.execute("""
                 UPDATE admin 
                 SET username = %s, password = %s, update_count = update_count + 1 
-                WHERE token = %s
-            """, (new_username, new_password, token))
-            return True
+                WHERE LOWER(username) = %s
+            """, (new_username, new_password, target_username))
+            return {"success": True}
     except Exception as e:
         print(f"[DB] Update creds error: {e}")
-        return False
+        return {"success": False, "message": str(e)}
     finally:
         conn.close()
 

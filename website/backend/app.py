@@ -312,13 +312,17 @@ def admin_update_creds():
         return jsonify({"error": "Unauthorized"}), 401
     
     data = request.json or {}
-    username = data.get('username')
-    password = data.get('password')
+    target_username = data.get('target_username')
+    new_username = data.get('new_username')
+    new_password = data.get('new_password')
     
-    if not username or not password:
-        return jsonify({"success": False, "message": "Missing username or password"}), 400
+    if not target_username or not new_username or not new_password:
+        return jsonify({"success": False, "message": "Missing target username, new username, or new password"}), 400
         
-    if db.update_credentials(token, username, password):
+    res = db.update_credentials(token, target_username, new_username, new_password)
+    if isinstance(res, dict):
+        return jsonify(res)
+    elif res:
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "Failed to update database"}), 500
 

@@ -1465,26 +1465,37 @@ function loadDbTablesInfo() {
 // UPDATE CREDENTIALS
 // =============================================================
 async function updateCredentials() {
-    const user = (document.getElementById('newAdminUser')
-        ?.value || '').trim();
-    const pass = document.getElementById('newAdminPass')
-        ?.value || '';
+    const targetUser = (document.getElementById('targetAdminUser')?.value || '').trim();
+    const newUser = (document.getElementById('newAdminUser')?.value || '').trim();
+    const newPass = document.getElementById('newAdminPass')?.value || '';
 
-    if (!user || !pass) {
-        alert('Please fill in both username and password.');
+    if (!targetUser || !newUser || !newPass) {
+        alert('Please fill in Target Admin Username, New Username, and New Password.');
         return;
     }
 
     try {
         const data = await api.post('/api/admin/update-creds', {
-            username: user,
-            password: pass
+            target_username: targetUser,
+            new_username: newUser,
+            new_password: newPass
         });
 
         if (data.success) {
-            alert('Success: Credentials updated successfully!\n' +
-                'Please log in again with new credentials.');
-            adminLogout();
+            alert('Success: Credentials updated successfully!');
+            // Log out only if they updated their own credentials
+            const currentUser = sessionStorage.getItem('adminUser') || '';
+            if (targetUser.toLowerCase() === currentUser.toLowerCase()) {
+                adminLogout();
+            } else {
+                document.getElementById('targetAdminUser').value = '';
+                document.getElementById('newAdminUser').value = '';
+                document.getElementById('newAdminPass').value = '';
+                // Refresh tables in case admin list changed
+                if (currentTableName === 'admin') {
+                    loadTableData('admin', 1);
+                }
+            }
         } else {
             alert(`Error: Failed to update credentials: ${data.message || 'Unknown error'}`);
         }
