@@ -727,6 +727,7 @@ def get_all_admins(token):
             rows = cur.fetchall()
             for r in rows:
                 r['is_main'] = (r['username'].lower() == main_admin)
+                r['password'] = hashlib.sha256(r['password'].encode('utf-8')).hexdigest()
             return rows
     finally:
         conn.close()

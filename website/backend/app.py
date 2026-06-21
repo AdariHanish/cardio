@@ -241,15 +241,23 @@ def admin_reveal_value():
     if not table or not row_id or not column:
         return jsonify({"success": False, "message": "Missing parameters"})
     
-    # Only allow revealing from admin table for security
-    if column not in ('password', 'token'):
+    if table != 'admin' or column not in ('password', 'token'):
         return jsonify({"success": False, "message": "Cannot reveal this column"})
+    
+    is_main, current_user, _ = db.check_is_main_admin(token)
     
     try:
         conn = db.get_connection()
         if not conn:
             return jsonify({"success": False, "message": "DB connection failed"})
         with conn.cursor() as cur:
+            if not is_main:
+                # Non-main admins can only reveal their own row
+                cur.execute("SELECT id FROM admin WHERE LOWER(username) = %s", (current_user.lower(),))
+                user_row = cur.fetchone()
+                if not user_row or str(user_row['id']) != str(row_id):
+                    return jsonify({"success": False, "message": "Access Denied: You can only reveal your own credentials."})
+            
             cur.execute(f"SELECT `{column}` FROM `{table}` WHERE id = %s", (row_id,))
             row = cur.fetchone()
             if row:
@@ -258,7 +266,8 @@ def admin_reveal_value():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
     finally:
-        if conn: conn.close()
+        if 'conn' in locals() and conn:
+            conn.close()
 
 @app.route('/api/admin/db/tables/<table_name>/rows/<row_id>', methods=['DELETE'])
 def admin_delete_table_row(table_name, row_id):

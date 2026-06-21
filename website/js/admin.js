@@ -947,12 +947,20 @@ function renderTableData(data, viewer) {
                         'white-space:nowrap';
                 } else if (col === 'password' ||
                     col === 'token') {
-                    display = `<div style="display:flex; align-items:center; gap:8px;">
-                                 <span class="sensitive-value" data-raw="••••••••">••••••••</span>
-                                 <button class="btn btn-sm" 
-                                         style="padding: 4px; font-size: 10px; display:flex; align-items:center; justify-content:center"
-                                         onclick="toggleSecret(this, '${table_name}', ${row.id}, '${col}')">👁</button>
-                               </div>`;
+                    const currentUser = (sessionStorage.getItem('adminUser') || '').toLowerCase();
+                    const isOwnRow = table_name === 'admin' && row.username && row.username.toLowerCase() === currentUser;
+                    const canReveal = isMainAdmin() || isOwnRow;
+                    
+                    if (canReveal) {
+                        display = `<div style="display:flex; align-items:center; gap:8px;">
+                                     <span class="sensitive-value" data-raw="••••••••">••••••••</span>
+                                     <button class="btn btn-sm" 
+                                             style="padding: 4px; font-size: 10px; display:flex; align-items:center; justify-content:center"
+                                             onclick="toggleSecret(this, '${table_name}', ${row.id}, '${col}')">👁</button>
+                                   </div>`;
+                    } else {
+                        display = `<span class="sensitive-value" data-raw="••••••••">••••••••</span>`;
+                    }
                     style = 'color:var(--text-muted);' +
                         'letter-spacing:1px; white-space:nowrap';
                 } else if (typeof val === 'string' &&
