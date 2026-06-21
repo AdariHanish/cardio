@@ -523,9 +523,9 @@ def save_reading(patient_id, vitals, predictions, future):
 # STATS
 # =============================================================
 def get_stats():
-    """Get database statistics for dashboard"""
+    """Get database statistics for dashboard including storage size"""
     conn = get_connection()
-    if not conn: return {"total_patients": 0, "total_readings": 0, "today_readings": 0, "db_size_mb": 0}
+    if not conn: return {"total_patients": 0, "total_readings": 0, "today_readings": 0, "db_size_mb": 0, "db_size_bytes": 0}
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) as count FROM patients")
@@ -535,16 +535,52 @@ def get_stats():
             today = datetime.date.today()
             cur.execute("SELECT COUNT(*) as count FROM readings WHERE DATE(timestamp) = %s", (today,))
             today_readings = cur.fetchone()['count']
-            
-            # DB size is harder to get in TiDB Cloud without special perms, returning 0
+
+            # Query actual storage size from information_schema
+            db_size_bytes = 0
+            table_sizes = []
+            try:
+                cur.execute("""
+                    SELECT 
+                        table_name,
+                        ROUND((data_length + index_length), 0) AS size_bytes
+                    FROM information_schema.TABLES
+                    WHERE table_schema = %s
+                    ORDER BY size_bytes DESC
+                """, (TIDB_NAME,))
+                rows = cur.fetchall()
+                for row in rows:
+                    sz = row.get('size_bytes') or 0
+                    db_size_bytes += int(sz)
+                    table_sizes.append({
+                        "table": row['table_name'],
+                        "size_bytes": int(sz),
+                        "size_kb": round(int(sz) / 1024, 2)
+                    })
+            except Exception as size_err:
+                print(f"[DB] Could not query storage size: {size_err}")
+
+            db_size_mb = round(db_size_bytes / (1024 * 1024), 3)
+
+            # TiDB Cloud free tier = 5GB
+            FREE_TIER_MB = 5 * 1024
+            used_pct = round((db_size_mb / FREE_TIER_MB) * 100, 2) if FREE_TIER_MB > 0 else 0
+            free_mb = round(FREE_TIER_MB - db_size_mb, 3)
+
             return {
                 "total_patients" : total_patients,
                 "total_readings" : total_readings,
                 "today_readings" : today_readings,
-                "db_size_mb"     : 0,
+                "db_size_mb"     : db_size_mb,
+                "db_size_bytes"  : db_size_bytes,
+                "db_free_mb"     : free_mb,
+                "db_total_mb"    : FREE_TIER_MB,
+                "db_used_pct"    : used_pct,
+                "table_sizes"    : table_sizes,
             }
     finally:
         conn.close()
+
 
 # =============================================================
 # ADMIN AUTH

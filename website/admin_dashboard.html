@@ -558,6 +558,61 @@
         <div id="section-database" class="glass-card"
              style="display:none">
           <div class="section-title mb-3"><img src="assets/img/lucid_database.png" style="width:24px; height:24px; vertical-align:middle; margin-right:8px"> Database Tables</div>
+
+          <!-- ── STORAGE USAGE CARD ── -->
+          <div id="dbStorageCard" style="
+              background: linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,102,255,0.06));
+              border: 1px solid rgba(0,229,255,0.2);
+              border-radius: 16px;
+              padding: 22px 26px;
+              margin-bottom: 24px;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 24px;
+              align-items: center;
+          ">
+            <!-- Left: Usage bar -->
+            <div style="flex:1; min-width:220px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+                <span style="font-size:14px; font-weight:600; color:white;">💾 Storage Usage</span>
+                <span id="dbSizeLabel" style="font-size:13px; color:var(--cyan); font-weight:600;">Loading…</span>
+              </div>
+              <div style="height:10px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden;">
+                <div id="dbUsageBar" style="
+                    height:100%;
+                    width:0%;
+                    background: linear-gradient(90deg, var(--cyan), var(--blue-light));
+                    border-radius:999px;
+                    transition: width 1s ease;
+                "></div>
+              </div>
+              <div id="dbSizeSub" style="font-size:11px; color:var(--text-muted); margin-top:6px;">Calculating…</div>
+            </div>
+
+            <!-- Right: 3 stat boxes -->
+            <div style="display:flex; gap:14px; flex-wrap:wrap;">
+              <div style="text-align:center; padding:12px 18px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.15); border-radius:12px; min-width:90px;">
+                <div id="dbUsedStat" style="font-size:20px; font-weight:700; color:var(--cyan);">—</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Used</div>
+              </div>
+              <div style="text-align:center; padding:12px 18px; background:rgba(0,229,100,0.06); border:1px solid rgba(0,229,100,0.15); border-radius:12px; min-width:90px;">
+                <div id="dbFreeStat" style="font-size:20px; font-weight:700; color:var(--green);">—</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Free</div>
+              </div>
+              <div style="text-align:center; padding:12px 18px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; min-width:90px;">
+                <div id="dbTotalStat" style="font-size:20px; font-weight:700; color:white;">5 GB</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Total</div>
+              </div>
+            </div>
+
+            <!-- Per-table breakdown -->
+            <div id="dbTableBreakdown" style="width:100%; margin-top:4px; display:none;">
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; letter-spacing:0.5px;">TABLE BREAKDOWN</div>
+              <div id="dbTableBreakdownList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+            </div>
+          </div>
+          <!-- ── END STORAGE CARD ── -->
+
           <div id="dbTablesContent"></div>
         </div>
 

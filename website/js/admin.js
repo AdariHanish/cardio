@@ -1326,6 +1326,7 @@ function showSection(name) {
     if (name === 'database') {
         currentTableName = null;
         loadDbTables();
+        loadDbStorage();
     }
     if (name === 'models') loadModels();
 }
@@ -1394,6 +1395,61 @@ async function registerNewAdmin() {
         }
     } catch (e) {
         alert('Registration failed. Try again.');
+    }
+}
+
+// =============================================================
+// DB STORAGE USAGE
+// =============================================================
+async function loadDbStorage() {
+    // Reset UI to loading state
+    setEl('dbSizeLabel', 'Loading…');
+    setEl('dbSizeSub', 'Querying database…');
+    setEl('dbUsedStat', '—');
+    setEl('dbFreeStat', '—');
+    const bar = document.getElementById('dbUsageBar');
+    if (bar) bar.style.width = '0%';
+
+    const data = await api.get('/api/admin/stats');
+    if (!data.success) return;
+
+    const usedMb  = data.db_size_mb   || 0;
+    const freeMb  = data.db_free_mb   || 0;
+    const totalMb = data.db_total_mb  || 5120;
+    const usedPct = data.db_used_pct  || 0;
+    const sizes   = data.table_sizes  || [];
+
+    const fmt = (mb) => mb < 1 ? `${(mb * 1024).toFixed(1)} KB` : `${mb.toFixed(2)} MB`;
+
+    setEl('dbSizeLabel', `${usedPct}% used`);
+    setEl('dbSizeSub', `${fmt(usedMb)} of ${(totalMb / 1024).toFixed(0)} GB used — ${fmt(freeMb)} remaining (TiDB Cloud Free Tier)`);
+    setEl('dbUsedStat', fmt(usedMb));
+    setEl('dbFreeStat', fmt(freeMb));
+
+    // Animate the bar
+    setTimeout(() => {
+        if (bar) {
+            const pct = Math.max(usedPct, 0.5);
+            bar.style.width = pct + '%';
+            // Change colour when above 80%
+            if (pct > 80) bar.style.background = 'linear-gradient(90deg, #ff9800, #f44336)';
+            else if (pct > 60) bar.style.background = 'linear-gradient(90deg, #ffeb3b, #ff9800)';
+        }
+    }, 100);
+
+    // Per-table breakdown
+    const breakdownEl = document.getElementById('dbTableBreakdown');
+    const listEl = document.getElementById('dbTableBreakdownList');
+    if (listEl && sizes.length > 0) {
+        listEl.innerHTML = sizes.map(t => {
+            const kb = t.size_kb;
+            const label = kb < 1024 ? `${kb} KB` : `${(kb / 1024).toFixed(2)} MB`;
+            return `<div style="padding:6px 12px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.1); border-radius:8px; font-size:12px;">
+                <span style="color:var(--cyan); font-weight:600;">${t.table}</span>
+                <span style="color:var(--text-muted); margin-left:8px;">${label}</span>
+            </div>`;
+        }).join('');
+        if (breakdownEl) breakdownEl.style.display = 'block';
     }
 }
 
