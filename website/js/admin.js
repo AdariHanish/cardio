@@ -37,12 +37,35 @@ let patientsPage = 1;
 let readingsPage = 1;
 const PER_PAGE = 50;
 
+// Inactivity timeout (3 minutes)
+const INACTIVITY_LIMIT = 3 * 60 * 1000; // 180000 ms
+let inactivityTimer;
+
+// Reset inactivity timer on user actions
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(logoutDueToInactivity, INACTIVITY_LIMIT);
+}
+
+// Logout when inactive
+function logoutDueToInactivity() {
+    sessionStorage.removeItem('adminToken');
+    sessionStorage.removeItem('adminUser');
+    alert('Session timed out due to inactivity. Please log in again.');
+    window.location.replace('admin.html');
+}
+
+// Attach activity listeners
+['mousemove','keydown','click','touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer);
+});
+
 // =============================================================
 // ON PAGE LOAD
 // =============================================================
 window.onload = function () {
     if (!checkAdminAuth()) return;
-    loadAdminData();
+    loadAdminData(); resetInactivityTimer();
 };
 
 window.onpageshow = function (event) {
