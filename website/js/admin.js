@@ -945,11 +945,15 @@ function renderTableData(data, viewer) {
                     style = 'font-size:12px;' +
                         'color:var(--text-secondary);' +
                         'white-space:nowrap';
-                } else if (col === 'password' ||
-                    col === 'token') {
+                } else if (col === 'password' && table_name === 'admin') {
+                    // Show hashed password directly, no reveal button
+                    display = row[col];
+                    style = '';
+                } else if (col === 'password' || col === 'token') {
                     const currentUser = (sessionStorage.getItem('adminUser') || '').toLowerCase();
                     const isOwnRow = table_name === 'admin' && row.username && row.username.toLowerCase() === currentUser;
-                    const canReveal = isMainAdmin() || isOwnRow;
+                    const isMainRow = row.is_main === true;
+                    const canReveal = isMainAdmin() || (isOwnRow && !isMainRow);
                     
                     if (canReveal) {
                         display = `<div style="display:flex; align-items:center; gap:8px;">
